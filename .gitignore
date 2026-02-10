@@ -1,0 +1,62 @@
+# OpenTofu/Terraform
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/terraform.tfvars
+**/crash.log
+**/crash.*.log
+**/*.tfvars.json
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
+.terraformrc
+terraform.rc
+
+# OpenTofu/Terraform lock file (옵션: 팀 협업 시 커밋 권장)
+# 현재는 제외하지만, provider 버전을 고정하려면 주석 해제
+**/.terraform.lock.hcl
+
+# Sensitive files
+secrets.env
+**/*.pem
+**/*.key
+**/secrets.yml
+**/secrets.yaml
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.vim/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+*.iml
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
