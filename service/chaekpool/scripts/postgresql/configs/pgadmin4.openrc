@@ -1,0 +1,20 @@
+#!/sbin/openrc-run
+
+description="pgAdmin 4 Web Interface"
+command="/opt/pgadmin4/venv/bin/gunicorn"
+command_args="--bind 0.0.0.0:5050 --workers 1 --threads 4 --chdir /opt/pgadmin4/venv/lib/python3.*/site-packages/pgadmin4 pgAdmin4:app"
+command_user="pgadmin:pgadmin"
+
+supervisor="supervise-daemon"
+respawn_max=0
+respawn_delay=5
+respawn_period=60
+output_log="/var/log/pgadmin/pgadmin.log"
+error_log="/var/log/pgadmin/pgadmin.log"
+
+export PYTHONPATH="/opt/pgadmin4"
+
+depend() {
+    need net
+    after postgresql
+}

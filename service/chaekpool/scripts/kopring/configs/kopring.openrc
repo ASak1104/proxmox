@@ -1,0 +1,27 @@
+#!/sbin/openrc-run
+
+description="Kopring Spring Boot Application"
+
+command="/opt/kopring/kopring-wrapper.sh"
+command_user="kopring:kopring"
+
+supervisor="supervise-daemon"
+respawn_max=0
+respawn_delay=5
+respawn_period=60
+
+directory="/opt/kopring"
+output_log="/var/log/kopring.log"
+error_log="/var/log/kopring.log"
+
+depend() {
+    need net
+}
+
+start_pre() {
+    # Pre-create log file with proper ownership
+    touch /var/log/kopring.log
+    chown kopring:kopring /var/log/kopring.log
+
+    checkpath --directory --owner kopring:kopring --mode 0755 /run
+}

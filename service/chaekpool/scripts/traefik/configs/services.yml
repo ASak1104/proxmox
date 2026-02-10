@@ -1,0 +1,81 @@
+http:
+  routers:
+    # --- App ---
+    kopring:
+      rule: "Host(`api.cp.codingmon.dev`)"
+      service: kopring
+      entryPoints:
+        - web
+
+    # --- Data 관리 UI ---
+    pgadmin:
+      rule: "Host(`postgres.cp.codingmon.dev`)"
+      service: pgadmin
+      entryPoints:
+        - web
+    redis-commander:
+      rule: "Host(`redis.cp.codingmon.dev`)"
+      service: redis-commander
+      entryPoints:
+        - web
+
+    # --- Monitoring ---
+    grafana:
+      rule: "Host(`grafana.cp.codingmon.dev`)"
+      service: grafana
+      entryPoints:
+        - web
+    prometheus:
+      rule: "Host(`prometheus.cp.codingmon.dev`)"
+      service: prometheus
+      entryPoints:
+        - web
+    jaeger:
+      rule: "Host(`jaeger.cp.codingmon.dev`)"
+      service: jaeger
+      entryPoints:
+        - web
+
+    # --- CI/CD ---
+    jenkins:
+      rule: "Host(`jenkins.cp.codingmon.dev`)"
+      service: jenkins
+      entryPoints:
+        - web
+
+  services:
+    # --- App ---
+    kopring:
+      loadBalancer:
+        servers:
+          - url: "http://10.1.0.140:8080"
+
+    # --- Data 관리 UI ---
+    pgadmin:
+      loadBalancer:
+        servers:
+          - url: "http://10.1.0.110:5050"
+    redis-commander:
+      loadBalancer:
+        servers:
+          - url: "http://10.1.0.111:8081"
+
+    # --- Monitoring ---
+    grafana:
+      loadBalancer:
+        servers:
+          - url: "http://10.1.0.120:3000"
+    prometheus:
+      loadBalancer:
+        servers:
+          - url: "http://10.1.0.120:9090"
+    jaeger:
+      loadBalancer:
+        servers:
+          - url: "http://10.1.0.120:16686"
+
+    # --- CI/CD ---
+    jenkins:
+      loadBalancer:
+        servers:
+          - url: "http://10.1.0.130:8080"
