@@ -1,0 +1,17 @@
+jenkins:
+  securityRealm:
+    oic:
+      clientId: "jenkins"
+      clientSecret: "__OIDC_JENKINS_SECRET__"
+      serverConfiguration:
+        wellKnown:
+          wellKnownOpenIDConfigurationUrl: "https://authelia.cp.codingmon.dev/.well-known/openid-configuration"
+      userNameField: "preferred_username"
+      fullNameFieldName: "name"
+      emailFieldName: "email"
+      groupsFieldName: "groups"
+      logoutFromOpenidProvider: true
+      postLogoutRedirectUrl: "https://jenkins.cp.codingmon.dev/"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
