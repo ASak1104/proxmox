@@ -91,7 +91,7 @@ Rule: VMID `2GN` → IP `10.1.0.(100 + G×10 + N)`, where G = group (0=LB, 1=Dat
 | VMID | Service | IP | Domain |
 |------|---------|-----|--------|
 | 200 | CP Traefik | 10.1.0.100 | — |
-| 201 | Authelia | 10.1.0.101 | auth.cp.codingmon.dev |
+| 201 | Authelia | 10.1.0.101 | authelia.cp.codingmon.dev |
 | 210 | PostgreSQL + pgAdmin | 10.1.0.110 | postgres.cp.codingmon.dev |
 | 211 | Valkey + Redis Commander | 10.1.0.111 | redis.cp.codingmon.dev |
 | 220 | Monitoring (Prometheus/Grafana/Loki/Jaeger) | 10.1.0.120 | {grafana,prometheus,jaeger}.cp.codingmon.dev |

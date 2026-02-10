@@ -106,10 +106,10 @@ OAUTH2_CONFIG = [{
     'OAUTH2_DISPLAY_NAME': 'Authelia SSO',
     'OAUTH2_CLIENT_ID': 'pgadmin',
     'OAUTH2_CLIENT_SECRET': '${AUTHELIA_OIDC_PGADMIN_SECRET}',
-    'OAUTH2_TOKEN_URL': 'https://auth.cp.codingmon.dev/api/oidc/token',
-    'OAUTH2_AUTHORIZATION_URL': 'https://auth.cp.codingmon.dev/api/oidc/authorization',
-    'OAUTH2_USERINFO_ENDPOINT': 'https://auth.cp.codingmon.dev/api/oidc/userinfo',
-    'OAUTH2_SERVER_METADATA_URL': 'https://auth.cp.codingmon.dev/.well-known/openid-configuration',
+    'OAUTH2_TOKEN_URL': 'https://authelia.cp.codingmon.dev/api/oidc/token',
+    'OAUTH2_AUTHORIZATION_URL': 'https://authelia.cp.codingmon.dev/api/oidc/authorization',
+    'OAUTH2_USERINFO_ENDPOINT': 'https://authelia.cp.codingmon.dev/api/oidc/userinfo',
+    'OAUTH2_SERVER_METADATA_URL': 'https://authelia.cp.codingmon.dev/.well-known/openid-configuration',
     'OAUTH2_SCOPE': 'openid email profile',
 }]
 PYEOF

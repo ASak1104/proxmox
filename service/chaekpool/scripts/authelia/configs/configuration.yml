@@ -9,7 +9,9 @@ log:
   level: "info"
   file_path: "/var/log/authelia/authelia.log"
 
-jwt_secret: "__JWT_SECRET__"
+identity_validation:
+  reset_password:
+    jwt_secret: "__JWT_SECRET__"
 
 authentication_backend:
   file:
@@ -24,7 +26,7 @@ access_control:
     - domain: "api.cp.codingmon.dev"
       policy: "bypass"
     # Authelia 포탈 자체
-    - domain: "auth.cp.codingmon.dev"
+    - domain: "authelia.cp.codingmon.dev"
       policy: "bypass"
     # 나머지 *.cp.codingmon.dev — 1단계 인증
     - domain: "*.cp.codingmon.dev"
@@ -34,7 +36,7 @@ session:
   secret: "__SESSION_SECRET__"
   cookies:
     - domain: "cp.codingmon.dev"
-      authelia_url: "https://auth.cp.codingmon.dev"
+      authelia_url: "https://authelia.cp.codingmon.dev"
       default_redirection_url: "https://grafana.cp.codingmon.dev"
 
 storage:
@@ -49,11 +51,11 @@ notifier:
 identity_providers:
   oidc:
     hmac_secret: "__OIDC_HMAC_SECRET__"
-    # JWKS key: AUTHELIA_IDENTITY_PROVIDERS_OIDC_JWKS_0_KEY_FILE 환경변수로 주입
     jwks:
       - key_id: "main"
         algorithm: "RS256"
         use: "sig"
+        key: {{ secret "/etc/authelia/oidc.jwks.rsa.4096.pem" | mindent 10 "|" }}
     clients:
       - client_id: "grafana"
         client_name: "Grafana"
@@ -74,23 +76,24 @@ identity_providers:
         client_name: "Jenkins"
         client_secret: "__OIDC_JENKINS_HASH__"
         authorization_policy: "one_factor"
-        require_pkce: true
-        pkce_challenge_method: "S256"
+        require_pkce: false
         redirect_uris:
           - "https://jenkins.cp.codingmon.dev/securityRealm/finishLogin"
         scopes:
           - "openid"
+          - "offline_access"
           - "profile"
           - "email"
           - "groups"
+          - "address"
+          - "phone"
         token_endpoint_auth_method: "client_secret_basic"
 
       - client_id: "pgadmin"
         client_name: "pgAdmin"
         client_secret: "__OIDC_PGADMIN_HASH__"
         authorization_policy: "one_factor"
-        require_pkce: true
-        pkce_challenge_method: "S256"
+        require_pkce: false
         redirect_uris:
           - "https://postgres.cp.codingmon.dev/oauth2/authorize"
         scopes:

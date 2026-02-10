@@ -13,7 +13,7 @@ http:
   routers:
     # --- IAM (미들웨어 없음 — 로그인 페이지 접근 허용) ---
     authelia:
-      rule: "Host(`auth.cp.codingmon.dev`)"
+      rule: "Host(`authelia.cp.codingmon.dev`)"
       service: authelia
       entryPoints:
         - web
