@@ -184,4 +184,4 @@ ssh admin@10.0.0.254 "sudo pct exec <CT_ID> -- rc-service <service> restart"
 
 ## License
 
-This project is for personal homelab use.
+This project is licensed under the [MIT License](LICENSE).
