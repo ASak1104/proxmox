@@ -19,6 +19,7 @@ terraform.rc
 
 # Sensitive files
 secrets.env
+.*.env
 **/*.pem
 **/*.key
 **/secrets.yml

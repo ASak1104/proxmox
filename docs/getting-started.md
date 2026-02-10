@@ -38,7 +38,7 @@ Proxmox 웹 UI에서 API 토큰을 생성한다:
 1. `Datacenter > Permissions > API Tokens` → Add
 2. User: `admin@pam`, Token ID: 원하는 이름
 3. **Privilege Separation** 체크 해제 (사용자와 동일 권한)
-4. 생성된 토큰 값을 `secrets.env`에 기록
+4. 생성된 토큰 값을 `core/.core.env`에 기록
 
 ## 2. 로컬 개발 머신 설정
 
@@ -80,53 +80,66 @@ ssh-add ~/.ssh/id_ed25519
 
 `*.codingmon.dev` 도메인이 OPNsense 외부 IP(`<OPNSENSE_WAN_IP>`)를 가리키도록 DNS를 설정한다. 실제 환경에서는 공인 IP에 대한 A 레코드를 등록한다.
 
-## 3. terraform.tfvars 설정
+## 3. 시크릿 파일 설정
 
-`terraform.tfvars`는 `.gitignore`에 포함되어 있으므로 각 환경에서 직접 생성해야 한다.
+시크릿 파일은 `.gitignore`에 포함되어 있으므로 각 환경에서 `.template` 파일을 복사하여 생성한다.
 
-각 디렉토리의 `terraform.tfvars.example`을 참조하여 `terraform.tfvars`를 생성한다. 실제 값은 `secrets.env`에서 가져온다.
+```bash
+# 코어 인프라 시크릿
+cp core/.core.env.template core/.core.env
+# 편집하여 Proxmox API 토큰, SSH 공개키 등 실제 값 입력
 
-### 인프라 계층 (`core/terraform/terraform.tfvars`)
+# Chaekpool 서비스 시크릿
+cp service/chaekpool/.chaekpool.env.template service/chaekpool/.chaekpool.env
+# 편집하여 서비스 비밀번호, Authelia 시크릿 등 실제 값 입력
+```
+
+### terraform.tfvars 설정
+
+각 디렉토리의 `terraform.tfvars.template`을 참조하여 `terraform.tfvars`를 생성한다. 실제 값은 `core/.core.env`에서 가져온다.
+
+#### 인프라 계층 (`core/terraform/terraform.tfvars`)
 
 ```hcl
 proxmox_endpoint  = "https://10.0.0.254:8006"
-proxmox_username  = "<PROXMOX_USERNAME from secrets.env>"
-proxmox_api_token = "<PROXMOX_API_TOKEN from secrets.env>"
+proxmox_username  = "<PROXMOX_USERNAME from core/.core.env>"
+proxmox_api_token = "<PROXMOX_API_TOKEN from core/.core.env>"
 node_name         = "pve"
-ssh_public_key    = "<SSH_PUBLIC_KEY from secrets.env>"
+ssh_public_key    = "<SSH_PUBLIC_KEY from core/.core.env>"
 ```
 
 변수 정의는 `core/terraform/variables.tf`를 참조한다.
 
-### 서비스 계층 (`service/chaekpool/terraform/terraform.tfvars`)
+#### 서비스 계층 (`service/chaekpool/terraform/terraform.tfvars`)
 
 ```hcl
 proxmox_endpoint  = "https://10.0.0.254:8006"
-proxmox_username  = "<PROXMOX_USERNAME from secrets.env>"
-proxmox_api_token = "<PROXMOX_API_TOKEN from secrets.env>"
+proxmox_username  = "<PROXMOX_USERNAME from core/.core.env>"
+proxmox_api_token = "<PROXMOX_API_TOKEN from core/.core.env>"
 node_name         = "pve"
-ssh_public_key    = "<SSH_PUBLIC_KEY from secrets.env>"
+ssh_public_key    = "<SSH_PUBLIC_KEY from core/.core.env>"
 ```
 
 변수 정의는 `service/chaekpool/terraform/variables.tf`를 참조한다. 컨테이너 스펙(VMID, IP, 리소스)은 `variables.tf`의 `containers` 변수에 기본값이 설정되어 있다.
 
 ## 4. 비밀번호 변경
 
-`service/chaekpool/scripts/common.sh`에 기본 비밀번호가 `changeme`로 설정되어 있다. **배포 전에 반드시 변경한다.**
+`service/chaekpool/.chaekpool.env`에서 서비스 비밀번호를 설정한다. `common.sh`의 기본값 `changeme`를 `.chaekpool.env`에서 override한다.
 
-변경 대상:
+주요 변수:
 
-| 변수 | 용도 | 위치 |
-|------|------|------|
-| `PG_PASSWORD` | PostgreSQL 사용자 비밀번호 | `common.sh:46` |
-| `VALKEY_PASSWORD` | Valkey 인증 비밀번호 | `common.sh:47` |
-| `PGADMIN_PASSWORD` | pgAdmin 관리자 비밀번호 | `common.sh:51` |
+| 변수 | 용도 |
+|------|------|
+| `PG_PASSWORD` | PostgreSQL 사용자 비밀번호 |
+| `VALKEY_PASSWORD` | Valkey 인증 비밀번호 |
+| `PGADMIN_PASSWORD` | pgAdmin 관리자 비밀번호 |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana 관리자 비밀번호 |
+| `AUTHELIA_*` | Authelia 시크릿 (JWT, 세션, OIDC 등) |
 
 비밀번호를 변경하면 관련 설정 파일도 함께 수정해야 한다:
 
 - `service/chaekpool/scripts/valkey/configs/valkey.conf` - `requirepass` 항목
 - `service/chaekpool/scripts/kopring/configs/application.yml` - `spring.datasource.password`, `spring.data.redis.password`
-- `service/chaekpool/scripts/monitoring/configs/grafana.ini` - `admin_password` (Grafana는 별도 비밀번호)
 
 ## 5. 사전 요구사항 체크리스트
 
@@ -138,9 +151,11 @@ ssh_public_key    = "<SSH_PUBLIC_KEY from secrets.env>"
 - [ ] SSH 키 생성 및 Proxmox 호스트에 등록
 - [ ] SSH Agent 실행 확인 (`ssh-add -l`)
 - [ ] DNS 설정 (`*.codingmon.dev → <OPNSENSE_WAN_IP>`)
-- [ ] `core/terraform/terraform.tfvars` 생성
-- [ ] `service/chaekpool/terraform/terraform.tfvars` 생성
-- [ ] `common.sh` 비밀번호 변경 (`changeme` → 실제 비밀번호)
+- [ ] `core/.core.env` 생성 (`.core.env.template`에서 복사)
+- [ ] `service/chaekpool/.chaekpool.env` 생성 (`.chaekpool.env.template`에서 복사)
+- [ ] `core/terraform/terraform.tfvars` 생성 (`terraform.tfvars.template`에서 복사)
+- [ ] `service/chaekpool/terraform/terraform.tfvars` 생성 (`terraform.tfvars.template`에서 복사)
+- [ ] `.chaekpool.env` 비밀번호 변경 (`changeme` → 실제 비밀번호)
 - [ ] 관련 설정 파일 비밀번호 동기화
 
 모든 항목을 확인한 후 [인프라 배포](infra-deployment.md)로 진행한다.

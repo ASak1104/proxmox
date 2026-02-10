@@ -1,7 +1,0 @@
-# See secrets.env for actual values
-proxmox_endpoint  = "https://10.0.0.254:8006"
-proxmox_username  = "<PROXMOX_USERNAME from secrets.env>"
-proxmox_api_token = "<PROXMOX_API_TOKEN from secrets.env>"
-node_name         = "pve"
-ssh_public_key    = "<SSH_PUBLIC_KEY from secrets.env>"
-opnsense_wan_ip   = "<OPNSENSE_WAN_IP>"
