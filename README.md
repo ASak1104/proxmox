@@ -1,6 +1,6 @@
-# Proxmox Homelab Infrastructure
+# Proxmox Home Server Infrastructure
 
-OpenTofu + Bash 기반 Proxmox 홈랩 인프라 자동화 프로젝트. OPNsense 방화벽 VM과 6개의 Alpine LXC 컨테이너로 구성된 2-tier 아키텍처를 코드로 관리합니다.
+OpenTofu + Bash 기반 Proxmox 홈랩 인프라 자동화 프로젝트. OPNsense 방화벽 VM과 6개의 Alpine LXC 컨테이너로 구성된 2-tier 아키텍처를 코드로 관리하고 있음
 
 ## Architecture
 
@@ -12,32 +12,32 @@ NAT Router (port forwarding)
   │
   ▼
 ┌─────────────────────────────────────────────────────┐
-│  Proxmox VE Host (192.168.0.100 / 10.0.0.254)      │
+│  Proxmox VE Host (192.168.0.100 / 10.0.0.254)       │
 │                                                     │
 │  ┌───────────────────────────────────────────────┐  │
 │  │  OPNsense VM 102                              │  │
 │  │  ├─ HAProxy (SSL termination)                 │  │
 │  │  └─ WireGuard VPN (UDP 51820)                 │  │
 │  └──────────────┬────────────────────────────────┘  │
-│                 │                                    │
-│    ┌────────────┼────────────────┐                   │
-│    │            │                │                   │
-│    ▼            ▼                ▼                   │
+│                 │                                   │
+│    ┌────────────┼────────────────┐                  │
+│    │            │                │                  │
+│    ▼            ▼                ▼                  │
 │  pve.*     opnsense.*      *.cp.codingmon.dev       │
 │  :8006       :443               │                   │
 │                                 ▼                   │
-│                    ┌─────────────────────┐           │
-│                    │ CP Traefik (CT 200) │           │
-│                    │   HTTP routing      │           │
-│                    └────────┬────────────┘           │
-│                             │                        │
+│                    ┌─────────────────────┐          │
+│                    │ CP Traefik (CT 200) │          │
+│                    │   HTTP routing      │          │
+│                    └────────┬────────────┘          │
+│                             │                       │
 │          ┌──────┬──────┬───┴────┬─────────┐         │
-│          ▼      ▼      ▼       ▼         ▼         │
-│       CT 210 CT 211 CT 220  CT 230    CT 240       │
+│          ▼      ▼      ▼       ▼         ▼          │
+│       CT 210 CT 211 CT 220  CT 230    CT 240        │
 │       Postgres Valkey Monitor Jenkins  Kopring      │
 │       pgAdmin  Redis  Grafana                       │
 │                Cmdr   Prom/Loki                     │
-│                       Jaeger                         │
+│                       Jaeger                        │
 └─────────────────────────────────────────────────────┘
 ```
 
