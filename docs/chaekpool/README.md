@@ -1,6 +1,6 @@
 # Chaekpool 서비스 배포
 
-Chaekpool 프로젝트의 서비스 계층. 6개의 Alpine 3.23 LXC 컨테이너로 구성되며, 모두 서비스 네트워크(vmbr2, `10.1.0.0/24`)에 위치한다.
+Chaekpool 프로젝트의 서비스 계층. 7개의 Alpine 3.23 LXC 컨테이너로 구성되며, 모두 서비스 네트워크(vmbr2, `10.1.0.0/24`)에 위치한다.
 
 > **전제 조건**: [인프라 배포](../infra-deployment.md)가 완료되어 있어야 한다.
 
@@ -9,6 +9,7 @@ Chaekpool 프로젝트의 서비스 계층. 6개의 Alpine 3.23 LXC 컨테이너
 | VMID | 호스트명 | IP | 코어 | 메모리 | 디스크 | 역할 |
 |------|---------|-----|------|--------|--------|------|
 | 200 | cp-traefik | 10.1.0.100 | 1 | 512MB | 5GB | HTTP 리버스 프록시 |
+| 201 | cp-authelia | 10.1.0.101 | 1 | 512MB | 5GB | SSO/OIDC (Authelia) |
 | 210 | cp-postgresql | 10.1.0.110 | 2 | 2GB | 20GB | PostgreSQL + pgAdmin |
 | 211 | cp-valkey | 10.1.0.111 | 1 | 1GB | 10GB | Valkey + Redis Commander |
 | 220 | cp-monitoring | 10.1.0.120 | 4 | 4GB | 30GB | Prometheus/Grafana/Loki/Jaeger |
@@ -24,7 +25,7 @@ tofu plan
 tofu apply
 ```
 
-`for_each` 패턴으로 `variables.tf`의 `containers` 맵에 정의된 6개 컨테이너를 일괄 생성한다. 모든 컨테이너는 unprivileged 모드로 생성된다.
+`for_each` 패턴으로 `variables.tf`의 `containers` 맵에 정의된 7개 컨테이너를 일괄 생성한다. 모든 컨테이너는 unprivileged 모드로 생성된다.
 
 ## 배포 방법
 
@@ -34,12 +35,13 @@ tofu apply
 bash service/chaekpool/scripts/deploy-all.sh
 ```
 
-6개 서비스를 순서대로 배포한다.
+7개 서비스를 순서대로 배포한다.
 
 ### 개별 배포
 
 ```bash
 bash service/chaekpool/scripts/traefik/deploy.sh
+bash service/chaekpool/scripts/authelia/deploy.sh
 bash service/chaekpool/scripts/postgresql/deploy.sh
 bash service/chaekpool/scripts/valkey/deploy.sh
 bash service/chaekpool/scripts/monitoring/deploy.sh
@@ -51,14 +53,16 @@ bash service/chaekpool/scripts/kopring/deploy.sh
 
 ```
 1. Traefik (200)     ← 먼저 (리버스 프록시)
-2. PostgreSQL (210)  ← Kopring 이전
-3. Valkey (211)      ← Kopring 이전
-4. Monitoring (220)  ← 독립
-5. Jenkins (230)     ← 독립
-6. Kopring (240)     ← 마지막 (PostgreSQL + Valkey 필수)
+2. Authelia (201)    ← 독립 (SSO/OIDC)
+3. PostgreSQL (210)  ← Kopring 이전
+4. Valkey (211)      ← Kopring 이전
+5. Monitoring (220)  ← 독립
+6. Jenkins (230)     ← 독립
+7. Kopring (240)     ← 마지막 (PostgreSQL + Valkey 필수)
 ```
 
 - **Traefik**을 먼저 배포해야 다른 서비스에 도메인으로 접근 가능
+- **Authelia**는 Traefik과 독립적으로 배포 가능 (ForwardAuth/OIDC 사용 서비스보다 먼저 배포)
 - **PostgreSQL**과 **Valkey**는 Kopring보다 먼저 배포해야 함
 - **Monitoring**과 **Jenkins**는 독립적으로 언제든 배포 가능
 - **Kopring**은 PostgreSQL과 Valkey가 실행 중이어야 정상 기동
@@ -169,6 +173,7 @@ pct_exec <CT_ID> "rc-update show"
 | 서비스 | 문서 |
 |--------|------|
 | CP Traefik (CT 200) | [traefik.md](traefik.md) |
+| Authelia (CT 201) | [authelia.md](authelia.md) |
 | PostgreSQL + pgAdmin (CT 210) | [postgresql.md](postgresql.md) |
 | Valkey + Redis Commander (CT 211) | [valkey.md](valkey.md) |
 | Monitoring Stack (CT 220) | [monitoring.md](monitoring.md) |

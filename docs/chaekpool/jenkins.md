@@ -15,12 +15,13 @@ Jenkins CI/CD 서버. WAR 파일로 배포되며 OpenJDK 17에서 실행된다.
 bash service/chaekpool/scripts/jenkins/deploy.sh
 ```
 
-배포 단계 (4단계):
-1. OpenJDK 17 **전체 버전**, 폰트 패키지 설치
-2. `jenkins` 시스템 사용자/그룹 생성, 디렉토리 생성
-3. Jenkins WAR v2.541.1 다운로드 → `/opt/jenkins/jenkins.war`
-4. **Wrapper 스크립트** 배포 → `/opt/jenkins/jenkins-wrapper.sh`
-5. OpenRC 서비스 배포, 시작 및 부팅 시 자동 시작 등록
+배포 단계 (6단계):
+1. OpenJDK 17 **전체 버전**, 폰트 패키지 설치, `jenkins` 시스템 사용자 생성
+2. Jenkins WAR v2.541.1 다운로드 → `/opt/jenkins/jenkins.war`
+3. `oic-auth` + `configuration-as-code` 플러그인 사전 설치 (jenkins-plugin-manager)
+4. JCasC 설정(`casc.yaml`) 및 Wrapper 스크립트 배포
+5. OIDC 시크릿 주입 (`sed`로 플레이스홀더 치환)
+6. OpenRC 서비스 배포, 시작 및 부팅 시 자동 시작 등록
 
 ### 주요 패키지
 
@@ -38,11 +39,17 @@ bash service/chaekpool/scripts/jenkins/deploy.sh
 #!/bin/sh
 export JENKINS_HOME="/var/lib/jenkins"
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk"
+export CASC_JENKINS_CONFIG="/var/lib/jenkins/casc.yaml"
 cd "$JENKINS_HOME"
-exec /usr/bin/java -Xmx1024m -Djava.awt.headless=true -jar /opt/jenkins/jenkins.war --httpPort=8080
+exec /usr/bin/java -Xmx1024m \
+    -Djava.awt.headless=true \
+    -Djenkins.install.runSetupWizard=false \
+    -jar /opt/jenkins/jenkins.war --httpPort=8080
 ```
 
-OpenRC는 이 wrapper를 `command`로 호출함
+- `CASC_JENKINS_CONFIG`: JCasC 설정 파일 경로
+- `-Djenkins.install.runSetupWizard=false`: 초기 설정 마법사 비활성화 (JCasC가 대체)
+- OpenRC는 이 wrapper를 `command`로 호출함
 
 ## 설정
 
@@ -53,17 +60,41 @@ OpenRC는 이 wrapper를 `command`로 호출함
 | `/opt/jenkins/jenkins.war` | Jenkins WAR 파일 |
 | `/opt/jenkins/jenkins-wrapper.sh` | 환경 변수 설정 wrapper |
 | `/var/lib/jenkins/` | JENKINS_HOME (데이터, 플러그인, 작업) |
+| `/var/lib/jenkins/casc.yaml` | JCasC OIDC 설정 |
+| `/var/lib/jenkins/plugins/` | 사전 설치된 플러그인 |
 | `/var/log/jenkins/` | 로그 |
 
-### 초기 관리자 비밀번호
+### OIDC 인증 (Authelia)
 
-첫 기동 시 초기 관리자 비밀번호가 자동 생성된다:
+Jenkins는 Authelia를 OIDC Provider로 사용하여 SSO 로그인을 수행한다. `oic-auth` 플러그인과 JCasC(`configuration-as-code`)로 구성된다.
 
-```bash
-pct_exec 230 "cat /var/lib/jenkins/secrets/initialAdminPassword"
+**JCasC 설정** (`/var/lib/jenkins/casc.yaml`):
+```yaml
+jenkins:
+  securityRealm:
+    oic:
+      clientId: "jenkins"
+      clientSecret: "..."    # deploy.sh에서 주입
+      serverConfiguration:
+        wellKnown:
+          wellKnownOpenIDConfigurationUrl: "https://authelia.cp.codingmon.dev/.well-known/openid-configuration"
+      userNameField: "preferred_username"
+      fullNameFieldName: "name"
+      emailFieldName: "email"
+      groupsFieldName: "groups"
+      logoutFromOpenidProvider: true
+      postLogoutRedirectUrl: "https://jenkins.cp.codingmon.dev/"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
 ```
 
-웹 UI에서 이 비밀번호로 초기 설정 마법사를 진행한다.
+**주의사항**:
+- oic-auth 플러그인은 PKCE를 지원하지 않음 → Authelia에서 `require_pkce: false`
+- oic-auth는 Authelia의 `scopes_supported`에 나열된 **모든 스코프**를 자동 요청 → Authelia 클라이언트 설정에 7개 스코프 모두 허용 필요
+- `serverConfiguration.wellKnown`은 중첩 구조여야 함 (최상위에 `wellKnownOpenIDConfigurationUrl`을 쓰면 JCasC 파싱 실패)
+
+OIDC 상세 설정 및 트러블슈팅: [authelia.md](authelia.md) 참조
 
 ## 검증
 
@@ -117,5 +148,6 @@ pct_exec 230 "tail -f /var/log/jenkins/jenkins.log"
 | 파일 | 설명 |
 |------|------|
 | `service/chaekpool/scripts/jenkins/deploy.sh` | 배포 스크립트 |
+| `service/chaekpool/scripts/jenkins/configs/casc.yaml` | JCasC OIDC 설정 |
 | `service/chaekpool/scripts/jenkins/configs/jenkins.openrc` | OpenRC 서비스 파일 |
 | `service/chaekpool/scripts/jenkins/configs/jenkins-wrapper.sh` | 환경 변수 설정 wrapper |

@@ -19,6 +19,8 @@
 9. [현재 HAProxy 설정 상태](#9-현재-haproxy-설정-상태)
 10. [OPNsense 접속 방법](#10-opnsense-접속-방법)
 
+> 문제 #1~#9: 마이그레이션 과정 트러블슈팅, 문제 #10: ForwardAuth 관련
+
 ---
 
 ## 1. 아키텍처 개요
@@ -54,7 +56,7 @@ Internet → NAT Router (포트포워딩 80,443 → <OPNSENSE_WAN_IP>)
 | 인증서 이름 | 포함 도메인 | 용도 |
 |------------|-----------|------|
 | `infra-multi-san` | pve.codingmon.dev, opnsense.codingmon.dev | 인프라 서비스 |
-| `cp-multi-san` | postgres/redis/grafana/prometheus/jaeger/jenkins.cp.codingmon.dev | Chaekpool 서비스 |
+| `cp-multi-san` | authelia/postgres/redis/grafana/prometheus/jaeger/jenkins.cp.codingmon.dev | Chaekpool 서비스 |
 
 **분리 이유**: Let's Encrypt HTTP-01 챌린지에서 도메인 수가 많을수록 실패 확률이 높음. 인프라와 서비스를 분리하면 독립적으로 갱신/재발급 가능.
 
@@ -314,6 +316,37 @@ ssh <PROXMOX_USER>@<PROXMOX_HOST> "sudo ssh root@10.0.0.1 'python3 /tmp/script.p
 - OPNsense에서 `2>/dev/null`, `;`, `&&` 등 bash 특유의 문법은 동작하지 않을 수 있음
 - FreeBSD의 `sed`도 GNU 확장(`-i`, `:a;N;$!ba`)을 지원하지 않음
 - 복잡한 자동화는 Python 스크립트가 가장 안정적
+
+---
+
+### 문제 10: ForwardAuth 400 Bad Request (X-Forwarded-Proto 누락)
+
+**증상**: Traefik ForwardAuth 미들웨어로 보호된 서비스(Prometheus, Jaeger, Redis Commander) 접근 시 400 Bad Request.
+
+**원인**: 2-tier 프록시 구조에서 OPNsense HAProxy가 SSL을 종료하고, CP Traefik(10.1.0.100:80)에 HTTP로 전달한다. 이때 `X-Forwarded-Proto: https` 헤더가 전달되지 않으면, Authelia가 요청을 HTTP로 판단하여 `authelia_url`(HTTPS)과의 스킴 불일치로 400 에러를 반환한다.
+
+```
+클라이언트 → HTTPS → HAProxy (SSL 종료) → HTTP → Traefik → Authelia
+                                                         ↑
+                              X-Forwarded-Proto 누락 → 스킴 불일치 → 400
+```
+
+**해결**: CP Traefik 정적 설정에서 OPNsense 게이트웨이(10.1.0.1)의 프록시 헤더를 신뢰하도록 설정:
+
+```yaml
+# traefik.yml
+entryPoints:
+  web:
+    address: ":80"
+    forwardedHeaders:
+      trustedIPs:
+        - "10.1.0.1"
+```
+
+**교훈**:
+- 2-tier 프록시에서 ForwardAuth를 사용할 때는 반드시 `X-Forwarded-Proto`가 올바르게 전파되는지 확인
+- Traefik의 `forwardedHeaders.trustedIPs`를 설정하지 않으면 보안상 프록시 헤더를 무시함
+- Authelia ForwardAuth는 스킴(`https`)이 `authelia_url`과 일치해야 정상 동작
 
 ---
 
