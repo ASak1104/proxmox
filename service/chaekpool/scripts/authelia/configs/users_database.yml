@@ -1,12 +1,20 @@
 ---
 # Authelia 사용자 데이터베이스
-# __ADMIN_PASSWORD_HASH__ 는 deploy.sh에서 argon2id 해시로 치환
+# 플레이스홀더(__XXX__)는 deploy.sh에서 치환
 
 users:
-  admin:
+  cpadmin:
     disabled: false
-    displayname: "Admin"
-    email: "admin@codingmon.dev"
+    displayname: "CP Admin"
+    email: "__CPADMIN_EMAIL__"
     groups:
       - "admins"
-    password: "__ADMIN_PASSWORD_HASH__"
+    password: "__CPADMIN_PASSWORD_HASH__"
+
+  cpuser:
+    disabled: false
+    displayname: "CP User"
+    email: "__CPUSER_EMAIL__"
+    groups:
+      - "users"
+    password: "__CPUSER_PASSWORD_HASH__"

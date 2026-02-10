@@ -24,7 +24,7 @@ echo "Downloading Authelia v${AUTHELIA_VERSION}..."
 cd /tmp
 wget -q https://github.com/authelia/authelia/releases/download/v${AUTHELIA_VERSION}/authelia-v${AUTHELIA_VERSION}-linux-amd64-musl.tar.gz
 tar -xzf authelia-v${AUTHELIA_VERSION}-linux-amd64-musl.tar.gz
-mv authelia-linux-amd64-musl /usr/local/bin/authelia
+mv authelia /usr/local/bin/authelia
 chmod +x /usr/local/bin/authelia
 rm -f authelia-v${AUTHELIA_VERSION}-linux-amd64-musl.tar.gz
 
@@ -38,16 +38,17 @@ echo "Authelia binary installed"
 SCRIPT
 
 echo "[2/5] Generating secrets and hashes..."
-# Admin 비밀번호 argon2id 해시 생성
-ADMIN_HASH=$(pve_ssh "sudo pct exec ${CT_ID} -- /usr/local/bin/authelia crypto hash generate argon2 --password '${AUTHELIA_ADMIN_PASSWORD}'" 2>/dev/null | grep '^\$')
+# 사용자 비밀번호 argon2id 해시 생성
+CPADMIN_HASH=$(pve_ssh "sudo pct exec ${CT_ID} -- /usr/local/bin/authelia crypto hash generate argon2 --password '${AUTHELIA_CPADMIN_PASSWORD}'" 2>/dev/null | sed -n 's/^Digest: //p')
+CPUSER_HASH=$(pve_ssh "sudo pct exec ${CT_ID} -- /usr/local/bin/authelia crypto hash generate argon2 --password '${AUTHELIA_CPUSER_PASSWORD}'" 2>/dev/null | sed -n 's/^Digest: //p')
 
 # OIDC 클라이언트 시크릿 pbkdf2 해시 생성
-GRAFANA_HASH=$(pve_ssh "sudo pct exec ${CT_ID} -- /usr/local/bin/authelia crypto hash generate pbkdf2 --password '${AUTHELIA_OIDC_GRAFANA_SECRET}'" 2>/dev/null | grep '^\$')
-JENKINS_HASH=$(pve_ssh "sudo pct exec ${CT_ID} -- /usr/local/bin/authelia crypto hash generate pbkdf2 --password '${AUTHELIA_OIDC_JENKINS_SECRET}'" 2>/dev/null | grep '^\$')
-PGADMIN_HASH=$(pve_ssh "sudo pct exec ${CT_ID} -- /usr/local/bin/authelia crypto hash generate pbkdf2 --password '${AUTHELIA_OIDC_PGADMIN_SECRET}'" 2>/dev/null | grep '^\$')
+GRAFANA_HASH=$(pve_ssh "sudo pct exec ${CT_ID} -- /usr/local/bin/authelia crypto hash generate pbkdf2 --password '${AUTHELIA_OIDC_GRAFANA_SECRET}'" 2>/dev/null | sed -n 's/^Digest: //p')
+JENKINS_HASH=$(pve_ssh "sudo pct exec ${CT_ID} -- /usr/local/bin/authelia crypto hash generate pbkdf2 --password '${AUTHELIA_OIDC_JENKINS_SECRET}'" 2>/dev/null | sed -n 's/^Digest: //p')
+PGADMIN_HASH=$(pve_ssh "sudo pct exec ${CT_ID} -- /usr/local/bin/authelia crypto hash generate pbkdf2 --password '${AUTHELIA_OIDC_PGADMIN_SECRET}'" 2>/dev/null | sed -n 's/^Digest: //p')
 
-# RSA 4096 JWKS 키 생성
-pct_exec "${CT_ID}" "openssl genrsa -out /etc/authelia/oidc.jwks.rsa.4096.pem 4096 2>/dev/null && chown authelia:authelia /etc/authelia/oidc.jwks.rsa.4096.pem && chmod 600 /etc/authelia/oidc.jwks.rsa.4096.pem"
+# RSA 4096 JWKS 키 생성 (기존 키가 없을 때만)
+pct_exec "${CT_ID}" "[ -f /etc/authelia/oidc.jwks.rsa.4096.pem ] || { openssl genrsa -out /etc/authelia/oidc.jwks.rsa.4096.pem 4096 2>/dev/null && chown authelia:authelia /etc/authelia/oidc.jwks.rsa.4096.pem && chmod 600 /etc/authelia/oidc.jwks.rsa.4096.pem; }"
 
 echo "Secrets generated"
 
@@ -58,20 +59,58 @@ pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/authelia-wrapper.sh" "/opt/authelia/a
 pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/authelia.openrc" "/etc/init.d/authelia"
 
 echo "[4/5] Injecting secrets into configuration..."
-pct_script "${CT_ID}" <<SCRIPT
+# 해시 값에 $가 포함되어 bash heredoc에서 변수로 치환되는 문제 방지
+# 시크릿/해시를 임시 파일로 push 후 컨테이너 내부 Python으로 치환
+cat > /tmp/authelia_secrets.env <<EOF_SECRETS
+JWT_SECRET=${AUTHELIA_JWT_SECRET}
+SESSION_SECRET=${AUTHELIA_SESSION_SECRET}
+STORAGE_ENCRYPTION_KEY=${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+OIDC_HMAC_SECRET=${AUTHELIA_OIDC_HMAC_SECRET}
+OIDC_GRAFANA_HASH=${GRAFANA_HASH}
+OIDC_JENKINS_HASH=${JENKINS_HASH}
+OIDC_PGADMIN_HASH=${PGADMIN_HASH}
+CPADMIN_PASSWORD_HASH=${CPADMIN_HASH}
+CPUSER_PASSWORD_HASH=${CPUSER_HASH}
+CPADMIN_EMAIL=${AUTHELIA_CPADMIN_EMAIL}
+CPUSER_EMAIL=${AUTHELIA_CPUSER_EMAIL}
+EOF_SECRETS
+pct_push "${CT_ID}" "/tmp/authelia_secrets.env" "/tmp/authelia_secrets.env"
+rm -f /tmp/authelia_secrets.env
+
+pct_script "${CT_ID}" <<'SCRIPT'
 set -e
+apk add --no-cache python3 > /dev/null 2>&1 || true
 
-# configuration.yml 시크릿 주입
-sed -i "s|__JWT_SECRET__|${AUTHELIA_JWT_SECRET}|g" /etc/authelia/configuration.yml
-sed -i "s|__SESSION_SECRET__|${AUTHELIA_SESSION_SECRET}|g" /etc/authelia/configuration.yml
-sed -i "s|__STORAGE_ENCRYPTION_KEY__|${AUTHELIA_STORAGE_ENCRYPTION_KEY}|g" /etc/authelia/configuration.yml
-sed -i "s|__OIDC_HMAC_SECRET__|${AUTHELIA_OIDC_HMAC_SECRET}|g" /etc/authelia/configuration.yml
-sed -i "s|__OIDC_GRAFANA_HASH__|${GRAFANA_HASH}|g" /etc/authelia/configuration.yml
-sed -i "s|__OIDC_JENKINS_HASH__|${JENKINS_HASH}|g" /etc/authelia/configuration.yml
-sed -i "s|__OIDC_PGADMIN_HASH__|${PGADMIN_HASH}|g" /etc/authelia/configuration.yml
+python3 -c "
+import os
 
-# users_database.yml admin 비밀번호 해시 주입
-sed -i "s|__ADMIN_PASSWORD_HASH__|${ADMIN_HASH}|g" /etc/authelia/users_database.yml
+# Read secrets from temp file
+secrets = {}
+with open('/tmp/authelia_secrets.env') as f:
+    for line in f:
+        line = line.strip()
+        if '=' in line and not line.startswith('#'):
+            k, v = line.split('=', 1)
+            secrets[k] = v
+
+# Replace placeholders in configuration.yml
+with open('/etc/authelia/configuration.yml') as f:
+    cfg = f.read()
+for k, v in secrets.items():
+    cfg = cfg.replace(f'__{k}__', v)
+with open('/etc/authelia/configuration.yml', 'w') as f:
+    f.write(cfg)
+
+# Replace placeholder in users_database.yml
+with open('/etc/authelia/users_database.yml') as f:
+    udb = f.read()
+for k, v in secrets.items():
+    udb = udb.replace(f'__{k}__', v)
+with open('/etc/authelia/users_database.yml', 'w') as f:
+    f.write(udb)
+"
+
+rm -f /tmp/authelia_secrets.env
 
 # 파일 권한 설정
 chown -R authelia:authelia /etc/authelia
@@ -84,7 +123,7 @@ SCRIPT
 echo "[5/5] Starting Authelia service..."
 pct_script "${CT_ID}" <<'SCRIPT'
 set -e
-rc-service authelia start
+rc-service authelia restart 2>/dev/null || rc-service authelia start
 rc-update add authelia
 rc-service authelia status
 echo "Authelia is ready"
