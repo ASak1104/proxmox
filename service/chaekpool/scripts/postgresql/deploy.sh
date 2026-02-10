@@ -5,6 +5,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../common.sh"
 
+CP_ENV="${SCRIPT_DIR}/../../.chaekpool.env"
+[ -f "${CP_ENV}" ] && source "${CP_ENV}"
+
 CT_ID="${CT_POSTGRESQL}"
 
 echo "=== Deploying PostgreSQL + pgAdmin to CT ${CT_ID} ==="
@@ -85,7 +88,7 @@ mkdir -p /var/lib/pgadmin /var/log/pgadmin
 chown -R pgadmin:pgadmin /var/lib/pgadmin /var/log/pgadmin /opt/pgadmin4
 
 # Configure pgAdmin
-cat > /opt/pgadmin4/config_local.py <<'PYEOF'
+cat > /opt/pgadmin4/config_local.py <<PYEOF
 import os
 SERVER_MODE = True
 DEFAULT_SERVER = "0.0.0.0"
@@ -95,6 +98,20 @@ LOG_FILE = "/var/log/pgadmin/pgadmin.log"
 SQLITE_PATH = "/var/lib/pgadmin/pgadmin4.db"
 SESSION_DB_PATH = "/var/lib/pgadmin/sessions"
 STORAGE_DIR = "/var/lib/pgadmin/storage"
+
+AUTHENTICATION_SOURCES = ['oauth2', 'internal']
+OAUTH2_AUTO_CREATE_USER = True
+OAUTH2_CONFIG = [{
+    'OAUTH2_NAME': 'authelia',
+    'OAUTH2_DISPLAY_NAME': 'Authelia SSO',
+    'OAUTH2_CLIENT_ID': 'pgadmin',
+    'OAUTH2_CLIENT_SECRET': '${AUTHELIA_OIDC_PGADMIN_SECRET}',
+    'OAUTH2_TOKEN_URL': 'https://auth.cp.codingmon.dev/api/oidc/token',
+    'OAUTH2_AUTHORIZATION_URL': 'https://auth.cp.codingmon.dev/api/oidc/authorization',
+    'OAUTH2_USERINFO_ENDPOINT': 'https://auth.cp.codingmon.dev/api/oidc/userinfo',
+    'OAUTH2_SERVER_METADATA_URL': 'https://auth.cp.codingmon.dev/.well-known/openid-configuration',
+    'OAUTH2_SCOPE': 'openid email profile',
+}]
 PYEOF
 
 # Set initial admin user

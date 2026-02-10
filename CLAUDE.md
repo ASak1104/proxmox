@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OpenTofu + Bash script-based Proxmox homelab infrastructure automation. Two layers:
 - **core/**: Foundation layer (OPNsense firewall VM with HAProxy for SSL termination and routing)
-- **service/chaekpool/**: Service layer (6 Alpine 3.23 LXC containers on service network)
+- **service/chaekpool/**: Service layer (7 Alpine 3.23 LXC containers on service network)
 
 Documentation is in Korean. See `docs/README.md` for reading order.
 For OPNsense HAProxy operations (troubleshooting, adding domains/certs, API automation), see `docs/opnsense-haproxy-operations-guide.md`.
@@ -19,11 +19,11 @@ For OPNsense HAProxy operations (troubleshooting, adding domains/certs, API auto
 # Infra layer: OPNsense VM (102)
 cd core/terraform && tofu init && tofu plan && tofu apply
 
-# Service layer: 6 LXC containers (200-240)
+# Service layer: 7 LXC containers (200-240)
 cd service/chaekpool/terraform && tofu init && tofu plan && tofu apply
 ```
 
-Requires SSH agent running (`ssh-add -l` to verify). `terraform.tfvars` is gitignored and must be created per environment — see `docs/getting-started.md`.
+Requires SSH agent running (`ssh-add -l` to verify). `terraform.tfvars` is gitignored and must be created per environment from `terraform.tfvars.template` — see `docs/getting-started.md`.
 
 ### Deploy Scripts
 
@@ -36,6 +36,7 @@ bash service/chaekpool/scripts/deploy-all.sh
 
 # Services: individual
 bash service/chaekpool/scripts/traefik/deploy.sh
+bash service/chaekpool/scripts/authelia/deploy.sh
 bash service/chaekpool/scripts/postgresql/deploy.sh
 bash service/chaekpool/scripts/valkey/deploy.sh
 bash service/chaekpool/scripts/monitoring/deploy.sh
@@ -43,7 +44,7 @@ bash service/chaekpool/scripts/jenkins/deploy.sh
 bash service/chaekpool/scripts/kopring/deploy.sh
 ```
 
-Deploy order matters: Traefik → PostgreSQL → Valkey → (Monitoring, Jenkins independently) → Kopring last (requires PostgreSQL + Valkey).
+Deploy order matters: (Traefik, Authelia independently) → PostgreSQL → Valkey → (Monitoring, Jenkins independently) → Kopring last (requires PostgreSQL + Valkey).
 
 ### Service Management (OpenRC on Alpine)
 
@@ -90,6 +91,7 @@ Rule: VMID `2GN` → IP `10.1.0.(100 + G×10 + N)`, where G = group (0=LB, 1=Dat
 | VMID | Service | IP | Domain |
 |------|---------|-----|--------|
 | 200 | CP Traefik | 10.1.0.100 | — |
+| 201 | Authelia | 10.1.0.101 | auth.cp.codingmon.dev |
 | 210 | PostgreSQL + pgAdmin | 10.1.0.110 | postgres.cp.codingmon.dev |
 | 211 | Valkey + Redis Commander | 10.1.0.111 | redis.cp.codingmon.dev |
 | 220 | Monitoring (Prometheus/Grafana/Loki/Jaeger) | 10.1.0.120 | {grafana,prometheus,jaeger}.cp.codingmon.dev |
@@ -117,9 +119,16 @@ All scripts use `set -euo pipefail`. Each service deploy script follows phases: 
 
 All services use `supervise-daemon` with consistent structure: `command`, `command_args`, `command_user`, `pidfile`, `output_log`/`error_log`, and `depend()` block. Config files live in `scripts/<service>/configs/*.openrc`.
 
-### Passwords
+### Secrets Management
 
-Default passwords in `service/chaekpool/scripts/common.sh` are `changeme`. When changing, sync across: `common.sh`, `valkey.conf` (requirepass), `application.yml` (spring datasource/redis), `grafana.ini` (admin_password).
+Secrets are managed through two env files (gitignored, create from `.template` files):
+
+| File | Purpose |
+|------|---------|
+| `core/.core.env` | Proxmox API token, SSH public key |
+| `service/chaekpool/.chaekpool.env` | Service passwords, Authelia secrets, OIDC client secrets |
+
+Default passwords in `service/chaekpool/scripts/common.sh` are `changeme`. `.chaekpool.env`에서 override. When changing, sync across: `common.sh`, `valkey.conf` (requirepass), `application.yml` (spring datasource/redis), `grafana.ini` (admin_password).
 
 ### Adding a New Service
 

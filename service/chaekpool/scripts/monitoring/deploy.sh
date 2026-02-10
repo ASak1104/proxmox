@@ -6,6 +6,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../common.sh"
 
+CP_ENV="${SCRIPT_DIR}/../../.chaekpool.env"
+[ -f "${CP_ENV}" ] && source "${CP_ENV}"
+
 CT_ID="${CT_MONITORING}"
 PROMETHEUS_VERSION="3.9.1"
 GRAFANA_VERSION="12.3.2"
@@ -90,6 +93,9 @@ echo "[4/8] Deploying Grafana configs..."
 pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/grafana.ini"       "/etc/grafana/grafana.ini"
 pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/datasources.yml"   "/etc/grafana/provisioning/datasources/datasources.yml"
 pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/grafana.openrc"    "/etc/init.d/grafana"
+
+pct_exec "${CT_ID}" "sed -i 's|client_secret = changeme|client_secret = ${AUTHELIA_OIDC_GRAFANA_SECRET}|' /etc/grafana/grafana.ini"
+pct_exec "${CT_ID}" "sed -i 's|admin_password = changeme|admin_password = ${GRAFANA_ADMIN_PASSWORD}|' /etc/grafana/grafana.ini"
 
 pct_script "${CT_ID}" <<'SCRIPT'
 set -e

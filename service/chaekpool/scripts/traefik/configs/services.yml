@@ -1,49 +1,77 @@
 http:
+  middlewares:
+    authelia:
+      forwardAuth:
+        address: "http://10.1.0.101:9091/api/authz/forward-auth"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "Remote-User"
+          - "Remote-Groups"
+          - "Remote-Email"
+          - "Remote-Name"
+
   routers:
-    # --- App ---
+    # --- IAM (미들웨어 없음 — 로그인 페이지 접근 허용) ---
+    authelia:
+      rule: "Host(`auth.cp.codingmon.dev`)"
+      service: authelia
+      entryPoints:
+        - web
+
+    # --- App (bypass — 자체 인증) ---
     kopring:
       rule: "Host(`api.cp.codingmon.dev`)"
       service: kopring
       entryPoints:
         - web
 
-    # --- Data 관리 UI ---
+    # --- OIDC 서비스 (미들웨어 없음 — 네이티브 OIDC 인증) ---
     pgadmin:
       rule: "Host(`postgres.cp.codingmon.dev`)"
       service: pgadmin
       entryPoints:
         - web
-    redis-commander:
-      rule: "Host(`redis.cp.codingmon.dev`)"
-      service: redis-commander
-      entryPoints:
-        - web
-
-    # --- Monitoring ---
     grafana:
       rule: "Host(`grafana.cp.codingmon.dev`)"
       service: grafana
       entryPoints:
         - web
-    prometheus:
-      rule: "Host(`prometheus.cp.codingmon.dev`)"
-      service: prometheus
-      entryPoints:
-        - web
-    jaeger:
-      rule: "Host(`jaeger.cp.codingmon.dev`)"
-      service: jaeger
-      entryPoints:
-        - web
-
-    # --- CI/CD ---
     jenkins:
       rule: "Host(`jenkins.cp.codingmon.dev`)"
       service: jenkins
       entryPoints:
         - web
 
+    # --- ForwardAuth 보호 서비스 (OIDC 미지원) ---
+    prometheus:
+      rule: "Host(`prometheus.cp.codingmon.dev`)"
+      service: prometheus
+      middlewares:
+        - authelia
+      entryPoints:
+        - web
+    jaeger:
+      rule: "Host(`jaeger.cp.codingmon.dev`)"
+      service: jaeger
+      middlewares:
+        - authelia
+      entryPoints:
+        - web
+    redis-commander:
+      rule: "Host(`redis.cp.codingmon.dev`)"
+      service: redis-commander
+      middlewares:
+        - authelia
+      entryPoints:
+        - web
+
   services:
+    # --- IAM ---
+    authelia:
+      loadBalancer:
+        servers:
+          - url: "http://10.1.0.101:9091"
+
     # --- App ---
     kopring:
       loadBalancer:
