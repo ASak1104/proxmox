@@ -1,0 +1,21 @@
+#!/sbin/openrc-run
+
+description="Authelia Authentication Server"
+command="/opt/authelia/authelia-wrapper.sh"
+command_user="authelia:authelia"
+
+supervisor="supervise-daemon"
+respawn_max=0
+respawn_delay=5
+respawn_period=60
+output_log="/var/log/authelia/authelia.log"
+error_log="/var/log/authelia/authelia.log"
+
+depend() {
+    need net
+}
+
+start_pre() {
+    checkpath --directory --owner authelia:authelia --mode 0755 /var/log/authelia
+    checkpath --directory --owner authelia:authelia --mode 0755 /var/lib/authelia
+}

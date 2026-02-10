@@ -14,42 +14,50 @@ echo "=== Wave 1: Deploying independent services in parallel ==="
 echo
 
 (
-  echo "[1/5] CP Traefik (CT 200)"
+  echo "[1/7] CP Traefik (CT 200)"
   echo "------------------------------------------"
   bash "${SCRIPT_DIR}/traefik/deploy.sh"
-  echo "✓ Traefik deployed"
+  echo "Traefik deployed"
 ) &
 TRAEFIK_PID=$!
 
 (
-  echo "[2/5] PostgreSQL + pgAdmin (CT 210)"
+  echo "[2/7] Authelia (CT 201)"
+  echo "------------------------------------------"
+  bash "${SCRIPT_DIR}/authelia/deploy.sh"
+  echo "Authelia deployed"
+) &
+AUTHELIA_PID=$!
+
+(
+  echo "[3/7] PostgreSQL + pgAdmin (CT 210)"
   echo "------------------------------------------"
   bash "${SCRIPT_DIR}/postgresql/deploy.sh"
-  echo "✓ PostgreSQL deployed"
+  echo "PostgreSQL deployed"
 ) &
 POSTGRES_PID=$!
 
 (
-  echo "[3/5] Valkey + Redis Commander (CT 211)"
+  echo "[4/7] Valkey + Redis Commander (CT 211)"
   echo "------------------------------------------"
   bash "${SCRIPT_DIR}/valkey/deploy.sh"
-  echo "✓ Valkey deployed"
+  echo "Valkey deployed"
 ) &
 VALKEY_PID=$!
 
 (
-  echo "[4/5] Monitoring Stack (CT 220)"
+  echo "[5/7] Monitoring Stack (CT 220)"
   echo "------------------------------------------"
   bash "${SCRIPT_DIR}/monitoring/deploy.sh"
-  echo "✓ Monitoring deployed"
+  echo "Monitoring deployed"
 ) &
 MONITORING_PID=$!
 
 (
-  echo "[5/5] Jenkins (CT 230)"
+  echo "[6/7] Jenkins (CT 230)"
   echo "------------------------------------------"
   bash "${SCRIPT_DIR}/jenkins/deploy.sh"
-  echo "✓ Jenkins deployed"
+  echo "Jenkins deployed"
 ) &
 JENKINS_PID=$!
 
@@ -58,30 +66,31 @@ echo "Waiting for Wave 1 services to complete..."
 WAVE1_FAILED=0
 
 wait $TRAEFIK_PID || WAVE1_FAILED=1
+wait $AUTHELIA_PID || WAVE1_FAILED=1
 wait $POSTGRES_PID || WAVE1_FAILED=1
 wait $VALKEY_PID || WAVE1_FAILED=1
 wait $MONITORING_PID || WAVE1_FAILED=1
 wait $JENKINS_PID || WAVE1_FAILED=1
 
 if [ $WAVE1_FAILED -eq 1 ]; then
-  echo "❌ Wave 1 deployment failed. Aborting."
+  echo "Wave 1 deployment failed. Aborting."
   exit 1
 fi
 
 echo
-echo "✓ Wave 1 completed successfully"
+echo "Wave 1 completed successfully"
 echo
 
 # Wave 2: PostgreSQL과 Valkey에 의존하는 서비스 배포
 echo "=== Wave 2: Deploying dependent services ==="
 echo
 
-echo "[6/6] Kopring (CT 240)"
+echo "[7/7] Kopring (CT 240)"
 echo "------------------------------------------"
 if bash "${SCRIPT_DIR}/kopring/deploy.sh"; then
-  echo "✓ Kopring deployed"
+  echo "Kopring deployed"
 else
-  echo "⚠️  Kopring deployment failed (check if app.jar exists)"
+  echo "Kopring deployment failed (check if app.jar exists)"
 fi
 echo
 

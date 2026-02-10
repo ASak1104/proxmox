@@ -58,6 +58,13 @@ variable "containers" {
       disk   = 5
       cores  = 1
     }
+    cp-authelia = {
+      id     = 201
+      ip     = "10.1.0.101/24"
+      memory = 256
+      disk   = 2
+      cores  = 1
+    }
     # Data (210-219)
     cp-postgresql = {
       id     = 210

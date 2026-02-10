@@ -10,6 +10,7 @@ PROXMOX_USER="admin"
 # 컨테이너 ID (카테고리별 그룹)
 # LB: 200-209
 CT_TRAEFIK="200"
+CT_AUTHELIA="201"
 # Data: 210-219
 CT_POSTGRESQL="210"
 CT_VALKEY="211"
@@ -22,6 +23,7 @@ CT_KOPRING="240"
 
 # 컨테이너 IP
 IP_TRAEFIK="10.1.0.100"
+IP_AUTHELIA="10.1.0.101"
 IP_POSTGRESQL="10.1.0.110"
 IP_VALKEY="10.1.0.111"
 IP_MONITORING="10.1.0.120"
@@ -30,6 +32,7 @@ IP_KOPRING="10.1.0.140"
 
 # 서비스 포트
 PORT_TRAEFIK="80"
+PORT_AUTHELIA="9091"
 PORT_POSTGRESQL="5432"
 PORT_PGADMIN="5050"
 PORT_VALKEY="6379"
@@ -52,6 +55,9 @@ VALKEY_PASSWORD="changeme"
 # pgAdmin 인증
 PGADMIN_EMAIL="admin@codingmon.dev"
 PGADMIN_PASSWORD="changeme"
+
+# Authelia 비밀번호 (실제 값은 secrets.env에서 override)
+AUTHELIA_ADMIN_PASSWORD="changeme"
 
 # Proxmox SSH 접속 함수
 pve_ssh() {

@@ -1,0 +1,12 @@
+---
+# Authelia 사용자 데이터베이스
+# __ADMIN_PASSWORD_HASH__ 는 deploy.sh에서 argon2id 해시로 치환
+
+users:
+  admin:
+    disabled: false
+    displayname: "Admin"
+    email: "admin@codingmon.dev"
+    groups:
+      - "admins"
+    password: "__ADMIN_PASSWORD_HASH__"
