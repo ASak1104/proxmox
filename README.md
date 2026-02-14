@@ -54,12 +54,12 @@ NAT Router (port forwarding)
 
 VMID 규칙: `2GN` → IP `10.1.0.(100 + G×10 + N)`
 
-| VMID | Service | IP | Domain | Resources |
-|------|---------|----|--------|-----------|
+| VMID | Service | IP | External | Resources |
+|------|---------|----|----------|-----------|
 | 200 | CP Traefik | 10.1.0.100 | — | 1 vCPU, 512MB, 5GB |
-| 210 | PostgreSQL + pgAdmin | 10.1.0.110 | postgres.cp.codingmon.dev | 2 vCPU, 2GB, 20GB |
-| 211 | Valkey + Redis Commander | 10.1.0.111 | redis.cp.codingmon.dev | 1 vCPU, 1GB, 10GB |
-| 220 | Prometheus, Grafana, Loki, Jaeger | 10.1.0.120 | {grafana,prometheus,jaeger}.cp.codingmon.dev | 4 vCPU, 4GB, 30GB |
+| 210 | PostgreSQL + pgAdmin | 10.1.0.110 | pgadmin.cp.codingmon.dev | 2 vCPU, 2GB, 20GB |
+| 211 | Valkey + Redis Commander | 10.1.0.111 | — | 1 vCPU, 1GB, 10GB |
+| 220 | Prometheus, Grafana, Loki, Jaeger | 10.1.0.120 | grafana.cp.codingmon.dev | 4 vCPU, 4GB, 30GB |
 | 230 | Jenkins | 10.1.0.130 | jenkins.cp.codingmon.dev | 2 vCPU, 2GB, 20GB |
 | 240 | Kopring (Spring Boot) | 10.1.0.140 | api.cp.codingmon.dev | 2 vCPU, 2GB, 10GB |
 

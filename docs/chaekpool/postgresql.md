@@ -6,7 +6,7 @@ PostgreSQL 16 데이터베이스 서버와 pgAdmin 4 웹 관리 도구.
 
 - **IP**: 10.1.0.110
 - **포트**: 5432 (PostgreSQL), 5050 (pgAdmin)
-- **접속 URL**: `https://postgres.cp.codingmon.dev` (pgAdmin)
+- **접속 URL**: `https://pgadmin.cp.codingmon.dev` (pgAdmin)
 
 ## 배포
 
@@ -83,7 +83,7 @@ pct_exec 210 "su - postgres -s /bin/sh -c 'psql -c \"\\l\"'"
 pct_exec 210 "rc-service pgadmin4 status"
 ```
 
-pgAdmin 웹 UI: `https://postgres.cp.codingmon.dev`
+pgAdmin 웹 UI: `https://pgadmin.cp.codingmon.dev`
 
 ## 운영
 

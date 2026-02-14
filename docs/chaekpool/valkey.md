@@ -6,7 +6,7 @@ Valkey 인메모리 데이터 스토어와 Redis Commander 웹 관리 도구.
 
 - **IP**: 10.1.0.111
 - **포트**: 6379 (Valkey), 8081 (Redis Commander)
-- **접속 URL**: `https://redis.cp.codingmon.dev` (Redis Commander)
+- **접속 URL**: `http://10.1.0.111:8081` (Redis Commander, VPN 직접 접근)
 
 ## 배포
 
@@ -76,7 +76,7 @@ pct_exec 211 "valkey-cli -a <비밀번호> ping"
 pct_exec 211 "rc-service redis-commander status"
 ```
 
-Redis Commander 웹 UI: `https://redis.cp.codingmon.dev`
+Redis Commander 웹 UI: `http://10.1.0.111:8081` (VPN 직접 접근)
 
 ## 운영
 

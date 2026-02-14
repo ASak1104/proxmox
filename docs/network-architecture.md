@@ -73,11 +73,8 @@ OPNsense (VM 102, <OPNSENSE_WAN_IP>)
   │           └─ *.cp.codingmon.dev       ──▶ CP Traefik (10.1.0.100:80, HTTP)
   │                                             │  Host 헤더 기반 라우팅
   │                                             ├─ api.cp.codingmon.dev        ──▶ 10.1.0.140:8080  (Kopring)
-  │                                             ├─ postgres.cp.codingmon.dev   ──▶ 10.1.0.110:5050  (pgAdmin)
-  │                                             ├─ redis.cp.codingmon.dev      ──▶ 10.1.0.111:8081  (Redis Commander)
+  │                                             ├─ pgadmin.cp.codingmon.dev   ──▶ 10.1.0.110:5050  (pgAdmin)
   │                                             ├─ grafana.cp.codingmon.dev    ──▶ 10.1.0.120:3000  (Grafana)
-  │                                             ├─ prometheus.cp.codingmon.dev ──▶ 10.1.0.120:9090  (Prometheus)
-  │                                             ├─ jaeger.cp.codingmon.dev     ──▶ 10.1.0.120:16686 (Jaeger)
   │                                             └─ jenkins.cp.codingmon.dev    ──▶ 10.1.0.130:8080  (Jenkins)
   │
   └─── WireGuard (UDP 51820) ── VPN 접근
@@ -96,11 +93,8 @@ OPNsense (VM 102, <OPNSENSE_WAN_IP>)
 | pve.codingmon.dev | OPNsense HAProxy (102) | 직접 | 10.0.0.254:8006 | HTTPS |
 | opnsense.codingmon.dev | OPNsense HAProxy (102) | 직접 | 127.0.0.1:443 | HTTPS |
 | api.cp.codingmon.dev | OPNsense HAProxy (102) | CP Traefik (200) | 10.1.0.140:8080 | HTTP |
-| postgres.cp.codingmon.dev | OPNsense HAProxy (102) | CP Traefik (200) | 10.1.0.110:5050 | HTTP |
-| redis.cp.codingmon.dev | OPNsense HAProxy (102) | CP Traefik (200) | 10.1.0.111:8081 | HTTP |
+| pgadmin.cp.codingmon.dev | OPNsense HAProxy (102) | CP Traefik (200) | 10.1.0.110:5050 | HTTP |
 | grafana.cp.codingmon.dev | OPNsense HAProxy (102) | CP Traefik (200) | 10.1.0.120:3000 | HTTP |
-| prometheus.cp.codingmon.dev | OPNsense HAProxy (102) | CP Traefik (200) | 10.1.0.120:9090 | HTTP |
-| jaeger.cp.codingmon.dev | OPNsense HAProxy (102) | CP Traefik (200) | 10.1.0.120:16686 | HTTP |
 | jenkins.cp.codingmon.dev | OPNsense HAProxy (102) | CP Traefik (200) | 10.1.0.130:8080 | HTTP |
 
 ## OPNsense HAProxy 설정

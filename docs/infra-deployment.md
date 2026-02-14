@@ -119,7 +119,7 @@ OPNsense 웹 UI:
 
 - `https://pve.codingmon.dev` - Proxmox 웹 UI
 - `https://opnsense.codingmon.dev` - OPNsense 웹 UI
-- `https://postgres.cp.codingmon.dev` - pgAdmin (Chaekpool)
+- `https://pgadmin.cp.codingmon.dev` - pgAdmin (Chaekpool)
 - `https://grafana.cp.codingmon.dev` - Grafana (Chaekpool)
 
 정상 작동이 확인되면 [Chaekpool 서비스 배포](chaekpool/README.md)로 진행한다.

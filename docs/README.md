@@ -55,11 +55,8 @@ proxmox/
                                     [CP Traefik (CT 200)] ── HTTP 라우팅
                                        │
                                        ├── api.cp.codingmon.dev       → Kopring (10.1.0.140:8080)
-                                       ├── postgres.cp.codingmon.dev  → pgAdmin (10.1.0.110:5050)
-                                       ├── redis.cp.codingmon.dev     → Redis Commander (10.1.0.111:8081)
+                                       ├── pgadmin.cp.codingmon.dev  → pgAdmin (10.1.0.110:5050)
                                        ├── grafana.cp.codingmon.dev   → Grafana (10.1.0.120:3000)
-                                       ├── prometheus.cp.codingmon.dev→ Prometheus (10.1.0.120:9090)
-                                       ├── jaeger.cp.codingmon.dev    → Jaeger (10.1.0.120:16686)
                                        └── jenkins.cp.codingmon.dev   → Jenkins (10.1.0.130:8080)
 ```
 

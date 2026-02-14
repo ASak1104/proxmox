@@ -98,15 +98,15 @@ OPNsense WireGuard (UDP 51820) provides split-tunnel VPN access to internal netw
 
 Rule: VMID `2GN` → IP `10.1.0.(100 + G×10 + N)`, where G = group (0=LB, 1=Data, 2=Monitoring, 3=CI/CD, 4=App), N = instance.
 
-| VMID | Service | IP | Domain |
-|------|---------|-----|--------|
-| 200 | CP Traefik | 10.1.0.100 | — |
-| 201 | Authelia | 10.1.0.101 | authelia.cp.codingmon.dev |
-| 210 | PostgreSQL + pgAdmin | 10.1.0.110 | postgres.cp.codingmon.dev |
-| 211 | Valkey + Redis Commander | 10.1.0.111 | redis.cp.codingmon.dev |
-| 220 | Monitoring (Prometheus/Grafana/Loki/Jaeger) | 10.1.0.120 | {grafana,prometheus,jaeger}.cp.codingmon.dev |
-| 230 | Jenkins | 10.1.0.130 | jenkins.cp.codingmon.dev |
-| 240 | Kopring | 10.1.0.140 | api.cp.codingmon.dev |
+| VMID | Service | IP | Endpoint | External |
+|------|---------|-----|----------|----------|
+| 200 | CP Traefik | 10.1.0.100 | :80 | — |
+| 201 | Authelia | 10.1.0.101 | :9091 | authelia.cp.codingmon.dev |
+| 210 | PostgreSQL + pgAdmin | 10.1.0.110 | :5432, :5050 | pgadmin.cp.codingmon.dev |
+| 211 | Valkey + Redis Commander | 10.1.0.111 | :6379, :8081 | — |
+| 220 | Monitoring | 10.1.0.120 | :9090, :3000, :3100, :16686 | grafana.cp.codingmon.dev |
+| 230 | Jenkins | 10.1.0.130 | :8080 | jenkins.cp.codingmon.dev |
+| 240 | Kopring | 10.1.0.140 | :8080 | api.cp.codingmon.dev |
 
 ## Key Conventions
 

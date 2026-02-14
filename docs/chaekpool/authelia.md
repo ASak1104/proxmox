@@ -183,7 +183,7 @@ Jenkins 측 설정 (JCasC `casc.yaml`):
 - client_id: "pgadmin"
   require_pkce: false     # Authlib(pgAdmin 백엔드)는 PKCE 미지원
   redirect_uris:
-    - "https://postgres.cp.codingmon.dev/oauth2/authorize"
+    - "https://pgadmin.cp.codingmon.dev/oauth2/authorize"
   scopes: [openid, profile, email]
   token_endpoint_auth_method: "client_secret_basic"
 ```

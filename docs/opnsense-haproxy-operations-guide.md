@@ -56,7 +56,7 @@ Internet → NAT Router (포트포워딩 80,443 → <OPNSENSE_WAN_IP>)
 | 인증서 이름 | 포함 도메인 | 용도 |
 |------------|-----------|------|
 | `infra-multi-san` | pve.codingmon.dev, opnsense.codingmon.dev | 인프라 서비스 |
-| `cp-multi-san` | authelia/postgres/redis/grafana/prometheus/jaeger/jenkins.cp.codingmon.dev | Chaekpool 서비스 |
+| `cp-multi-san` | authelia/pgadmin/grafana/jenkins.cp.codingmon.dev | Chaekpool 서비스 |
 
 **분리 이유**: Let's Encrypt HTTP-01 챌린지에서 도메인 수가 많을수록 실패 확률이 높음. 인프라와 서비스를 분리하면 독립적으로 갱신/재발급 가능.
 
@@ -496,12 +496,10 @@ cp-multi-san 인증서에 새 도메인을 추가하고 재발급:
 /usr/local/sbin/acme.sh \
   --home /var/etc/acme-client/home \
   --issue \
-  -d postgres.cp.codingmon.dev \
-  -d redis.cp.codingmon.dev \
+  -d pgadmin.cp.codingmon.dev \
   -d grafana.cp.codingmon.dev \
-  -d prometheus.cp.codingmon.dev \
-  -d jaeger.cp.codingmon.dev \
   -d jenkins.cp.codingmon.dev \
+  -d authelia.cp.codingmon.dev \
   -d newservice.cp.codingmon.dev \
   --keylength ec-256 \
   -w /var/etc/acme-client/challenges \
@@ -676,12 +674,12 @@ HAProxy에서 HTTPS 백엔드로 프록시할 때:
 │   ├── fullchain.cer               ← 전체 체인 (서버 + 중간 CA)
 │   ├── ca.cer                      ← 중간 CA 인증서
 │   └── pve.codingmon.dev.conf      ← acme.sh 설정
-└── postgres.cp.codingmon.dev_ecc/  ← cp-multi-san
-    ├── postgres.cp.codingmon.dev.cer
-    ├── postgres.cp.codingmon.dev.key
+└── pgadmin.cp.codingmon.dev_ecc/  ← cp-multi-san
+    ├── pgadmin.cp.codingmon.dev.cer
+    ├── pgadmin.cp.codingmon.dev.key
     ├── fullchain.cer
     ├── ca.cer
-    └── postgres.cp.codingmon.dev.conf
+    └── pgadmin.cp.codingmon.dev.conf
 ```
 
 ### 7.2 인증서 자동 갱신
@@ -812,12 +810,10 @@ pfctl -t sshlockout -T flush
 /usr/local/sbin/acme.sh \
   --home /var/etc/acme-client/home \
   --issue \
-  -d postgres.cp.codingmon.dev \
-  -d redis.cp.codingmon.dev \
+  -d pgadmin.cp.codingmon.dev \
   -d grafana.cp.codingmon.dev \
-  -d prometheus.cp.codingmon.dev \
-  -d jaeger.cp.codingmon.dev \
   -d jenkins.cp.codingmon.dev \
+  -d authelia.cp.codingmon.dev \
   --keylength ec-256 \
   -w /var/etc/acme-client/challenges \
   --server letsencrypt \
@@ -874,7 +870,7 @@ pfctl -t sshlockout -T flush
 | Name | refid | 용도 |
 |------|-------|------|
 | infra-multi-san | 698b0846c3b2f | pve + opnsense SSL |
-| cp-multi-san | 698b0846cee09 | 6개 cp 도메인 SSL |
+| cp-multi-san | 698b0846cee09 | 4개 cp 도메인 SSL |
 | Web GUI TLS certificate (x2) | 690acde654bc5, 69884d1e511c4 | OPNsense 자체 WebUI |
 
 ---

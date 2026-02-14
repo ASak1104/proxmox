@@ -9,10 +9,10 @@
 
 | 서비스 | 버전 | 포트 | 접속 URL |
 |--------|------|------|----------|
-| Prometheus | v3.9.1 | 9090 | `https://prometheus.cp.codingmon.dev` |
+| Prometheus | v3.9.1 | 9090 | `http://10.1.0.120:9090` (VPN) |
 | Grafana | v12.3.2 | 3000 | `https://grafana.cp.codingmon.dev` |
 | Loki | v3.6.5 | 3100 | (내부 전용) |
-| Jaeger | v2.15.0 | 16686 (UI), 4317 (gRPC), 4318 (HTTP) | `https://jaeger.cp.codingmon.dev` |
+| Jaeger | v2.15.0 | 16686 (UI), 4317 (gRPC), 4318 (HTTP) | `http://10.1.0.120:16686` (VPN) |
 
 ## 배포
 
@@ -168,8 +168,8 @@ curl -s http://10.1.0.120:3100/ready
 
 웹 UI:
 - Grafana: `https://grafana.cp.codingmon.dev`
-- Prometheus: `https://prometheus.cp.codingmon.dev`
-- Jaeger: `https://jaeger.cp.codingmon.dev`
+- Prometheus: `http://10.1.0.120:9090` (VPN 직접 접근)
+- Jaeger: `http://10.1.0.120:16686` (VPN 직접 접근)
 
 ## 운영
 
