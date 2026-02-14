@@ -25,6 +25,16 @@ cd service/chaekpool/terraform && tofu init && tofu plan && tofu apply
 
 Requires SSH agent running (`ssh-add -l` to verify). `terraform.tfvars` is gitignored and must be created per environment from `terraform.tfvars.template` — see `docs/getting-started.md`.
 
+### VPN
+
+```bash
+# VPN 연결 (배포 전 필수)
+bash scripts/vpn.sh up
+
+# VPN 해제/상태/재연결
+bash scripts/vpn.sh down|status|restart
+```
+
 ### Deploy Scripts
 
 ```bash
