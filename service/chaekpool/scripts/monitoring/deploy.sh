@@ -59,7 +59,7 @@ chmod 644 /etc/prometheus/prometheus.yml
 chmod 755 /etc/init.d/prometheus
 touch /var/log/prometheus.log
 chown prometheus:prometheus /var/log/prometheus.log
-rc-service prometheus start
+rc-service prometheus restart
 rc-update add prometheus
 echo "Prometheus started"
 SCRIPT
@@ -74,7 +74,7 @@ set -e
 addgroup -S grafana 2>/dev/null || true
 adduser -S -D -H -h /opt/grafana -s /sbin/nologin -G grafana -g grafana grafana 2>/dev/null || true
 
-mkdir -p /opt/grafana /etc/grafana/provisioning/datasources /var/lib/grafana /var/log/grafana
+mkdir -p /opt/grafana /etc/grafana/provisioning/datasources /etc/grafana/provisioning/dashboards/json /var/lib/grafana /var/log/grafana
 
 cd /tmp
 wget -q https://dl.grafana.com/oss/release/grafana-${GRAFANA_VERSION}.linux-amd64.tar.gz
@@ -92,17 +92,20 @@ SCRIPT
 echo "[4/8] Deploying Grafana configs..."
 pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/grafana.ini"       "/etc/grafana/grafana.ini"
 pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/datasources.yml"   "/etc/grafana/provisioning/datasources/datasources.yml"
+pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/dashboards.yml"    "/etc/grafana/provisioning/dashboards/dashboards.yml"
+pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/dashboards/chaekpool-api-overview.json" "/etc/grafana/provisioning/dashboards/json/chaekpool-api-overview.json"
 pct_push "${CT_ID}" "${SCRIPT_DIR}/configs/grafana.openrc"    "/etc/init.d/grafana"
 
-pct_exec "${CT_ID}" "sed -i 's|client_secret = changeme|client_secret = ${AUTHELIA_OIDC_GRAFANA_SECRET}|' /etc/grafana/grafana.ini"
-pct_exec "${CT_ID}" "sed -i 's|admin_password = changeme|admin_password = ${GRAFANA_ADMIN_PASSWORD}|' /etc/grafana/grafana.ini"
-
-pct_script "${CT_ID}" <<'SCRIPT'
+pct_script "${CT_ID}" <<SCRIPT
 set -e
+sed -i 's|client_secret = changeme|client_secret = ${AUTHELIA_OIDC_GRAFANA_SECRET}|' /etc/grafana/grafana.ini
+sed -i 's|admin_password = changeme|admin_password = ${GRAFANA_ADMIN_PASSWORD}|' /etc/grafana/grafana.ini
 chown -R grafana:grafana /etc/grafana
 chmod 644 /etc/grafana/grafana.ini /etc/grafana/provisioning/datasources/datasources.yml
+chmod 644 /etc/grafana/provisioning/dashboards/dashboards.yml
+find /etc/grafana/provisioning/dashboards/json -name '*.json' -exec chmod 644 {} +
 chmod 755 /etc/init.d/grafana
-rc-service grafana start
+rc-service grafana restart
 rc-update add grafana
 echo "Grafana started"
 SCRIPT
@@ -143,7 +146,7 @@ chmod 644 /etc/loki/loki.yml
 chmod 755 /etc/init.d/loki
 touch /var/log/loki.log
 chown loki:loki /var/log/loki.log
-rc-service loki start
+rc-service loki restart
 rc-update add loki
 echo "Loki started"
 SCRIPT
@@ -185,7 +188,7 @@ chmod 644 /etc/jaeger/jaeger.yml
 chmod 755 /etc/init.d/jaeger
 touch /var/log/jaeger.log
 chown jaeger:jaeger /var/log/jaeger.log
-rc-service jaeger start
+rc-service jaeger restart
 rc-update add jaeger
 echo "Jaeger started"
 SCRIPT
