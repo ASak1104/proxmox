@@ -1,4 +1,19 @@
 ---
+# --- Docker for Testcontainers ---
+- name: Install Docker
+  ansible.builtin.apk:
+    name:
+      - docker
+      - docker-cli-compose
+    state: present
+    update_cache: true
+
+- name: Enable Docker at boot
+  ansible.builtin.service:
+    name: docker
+    enabled: true
+    state: started
+
 - name: Install Java and fonts
   ansible.builtin.apk:
     name:
@@ -7,7 +22,6 @@
       - freetype
       - ttf-dejavu
     state: present
-    update_cache: true
 
 - name: Create jenkins user
   ansible.builtin.include_role:
@@ -20,6 +34,13 @@
       - "{{ jenkins_home }}"
       - "{{ jenkins_opt }}"
       - "{{ jenkins_log_dir }}"
+
+- name: Add jenkins user to docker group
+  ansible.builtin.user:
+    name: jenkins
+    groups: docker
+    append: true
+  notify: restart jenkins
 
 - name: Download Jenkins WAR
   ansible.builtin.get_url:

@@ -40,6 +40,18 @@ variable "svc_gateway" {
   default     = "10.1.0.1"
 }
 
+variable "proxmox_ssh_host" {
+  description = "Proxmox host for SSH access (via VPN)"
+  type        = string
+  default     = "10.0.0.254"
+}
+
+variable "proxmox_ssh_user" {
+  description = "Proxmox SSH user"
+  type        = string
+  default     = "admin"
+}
+
 variable "containers" {
   description = "Chaekpool project LXC containers"
   type = map(object({
@@ -88,14 +100,6 @@ variable "containers" {
       disk   = 30
       cores  = 4
     }
-    # CI/CD (230-239)
-    cp-jenkins = {
-      id     = 230
-      ip     = "10.1.0.130/24"
-      memory = 2048
-      disk   = 20
-      cores  = 2
-    }
     # App (240-249)
     cp-kopring = {
       id     = 240
@@ -104,5 +108,23 @@ variable "containers" {
       disk   = 10
       cores  = 2
     }
+  }
+}
+
+variable "jenkins_vm" {
+  description = "Jenkins VM configuration"
+  type = object({
+    id     = number
+    ip     = string
+    memory = number
+    disk   = number
+    cores  = number
+  })
+  default = {
+    id     = 230
+    ip     = "10.1.0.130/24"
+    memory = 4096
+    disk   = 30
+    cores  = 2
   }
 }
