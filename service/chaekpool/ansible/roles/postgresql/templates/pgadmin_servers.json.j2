@@ -5,7 +5,7 @@
       "Group": "Servers",
       "Host": "{{ ip_postgresql }}",
       "Port": {{ port_postgresql }},
-      "MaintenanceDB": "postgres",
+      "MaintenanceDB": "{{ pg_db }}",
       "Username": "{{ pg_user }}",
       "SSLMode": "prefer",
       "Shared": true
