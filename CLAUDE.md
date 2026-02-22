@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OpenTofu + Bash script-based Proxmox homelab infrastructure automation. Two layers:
+OpenTofu + Ansible 기반 Proxmox homelab infrastructure automation. Three layers:
 - **core/**: Foundation layer (OPNsense firewall VM with HAProxy for SSL termination and routing)
-- **service/chaekpool/**: Service layer (7 Alpine 3.23 LXC containers on service network)
+- **service/chaekpool/**: Service layer (7 Alpine 3.23 LXC containers + Ansible 설정 관리)
+  - `terraform/` — 인프라 프로비저닝
+  - `ansible/` — 설정 관리 (6개 서비스 배포 — Kopring 제외)
 
 Documentation is in Korean. See `docs/README.md` for reading order.
 For OPNsense HAProxy operations (troubleshooting, adding domains/certs, API automation), see `docs/opnsense-haproxy-operations-guide.md`.
@@ -19,7 +21,7 @@ For OPNsense HAProxy operations (troubleshooting, adding domains/certs, API auto
 # Infra layer: OPNsense VM (102)
 cd core/terraform && tofu init && tofu plan && tofu apply
 
-# Service layer: 7 LXC containers (200-240)
+# Service layer: 7 LXC containers (200-240) + Ansible 부트스트랩
 cd service/chaekpool/terraform && tofu init && tofu plan && tofu apply
 ```
 
@@ -35,32 +37,40 @@ bash scripts/vpn.sh up
 bash scripts/vpn.sh down|status|restart
 ```
 
-### Deploy Scripts
+### Ansible (Configuration Management)
 
 ```bash
-# Infra: OPNsense HAProxy configuration managed via Web UI
-# See docs/opnsense-haproxy-operations-guide.md for details
+# 사전 준비
+cd service/chaekpool/ansible
+ansible-galaxy collection install -r requirements.yml
+ansible all -m ping  # 연결 확인
 
-# Services: all at once (respects dependency order)
-bash service/chaekpool/scripts/deploy-all.sh
+# 전체 배포
+ansible-playbook site.yml
 
-# Services: individual
-bash service/chaekpool/scripts/traefik/deploy.sh
-bash service/chaekpool/scripts/authelia/deploy.sh
-bash service/chaekpool/scripts/postgresql/deploy.sh
-bash service/chaekpool/scripts/valkey/deploy.sh
-bash service/chaekpool/scripts/monitoring/deploy.sh
-bash service/chaekpool/scripts/jenkins/deploy.sh
-bash service/chaekpool/scripts/kopring/deploy.sh
+# 단일 서비스 배포
+ansible-playbook site.yml -l cp-traefik
+ansible-playbook site.yml -l cp-authelia
+ansible-playbook site.yml -l cp-postgresql
+ansible-playbook site.yml -l cp-valkey
+ansible-playbook site.yml -l cp-monitoring
+ansible-playbook site.yml -l cp-jenkins
+
+# 드라이런 (변경 예정 사항 확인)
+ansible-playbook site.yml --check --diff
+
+# 시크릿 편집
+ansible-vault edit group_vars/all/vault.yml
 ```
-
-Deploy order matters: (Traefik, Authelia independently) → PostgreSQL → Valkey → (Monitoring, Jenkins independently) → Kopring last (requires PostgreSQL + Valkey).
 
 ### Service Management (OpenRC on Alpine)
 
 ```bash
-pct_exec <CT_ID> "rc-service <service> status|start|stop|restart"
-pct_exec <CT_ID> "rc-update add|del <service>"
+# Ansible 경유
+ansible cp-<service> -m command -a "rc-service <service> status"
+
+# 직접 SSH (VPN 필요)
+ssh root@10.1.0.1xx "rc-service <service> status|start|stop|restart"
 ```
 
 ## Architecture
@@ -110,40 +120,66 @@ Rule: VMID `2GN` → IP `10.1.0.(100 + G×10 + N)`, where G = group (0=LB, 1=Dat
 
 ## Key Conventions
 
-### Deploy Script Pattern
+### Role-Based Deployment (Ansible)
 
-All scripts use `set -euo pipefail`. Each service deploy script follows phases: package install → config deploy → service start. Scripts source `common.sh` for shared variables and three core SSH helper functions:
+역할 분리:
+- **OpenTofu**: 인프라 생성 (VM, LXC, 네트워크). `null_resource`로 SSH+Python 부트스트랩
+- **Ansible**: 설정 관리 (패키지, 설정파일, 서비스, 시크릿). 6개 서비스 역할 + common
+- **Bash**: `scripts/vpn.sh`만 유지 (로컬 VPN 관리용)
 
-- `pct_exec <CT_ID> <CMD>`: Execute command in container via SSH → pct exec
-- `pct_push <CT_ID> <LOCAL> <REMOTE>`: Transfer file (local → Proxmox /tmp → container)
-- `pct_script <CT_ID> <<'SCRIPT'...SCRIPT`: Execute heredoc script in container via stdin
+연결 방식: Mac → VPN(10.1.0.x) → SSH 컨테이너 (root, 직접 접속)
+
+### Ansible Directory Structure
+
+```
+service/chaekpool/ansible/
+├── ansible.cfg              # 설정 (inventory 경로, vault 파일 등)
+├── requirements.yml         # community.postgresql 컬렉션
+├── site.yml                 # 전체 배포 오케스트레이션
+├── inventory/hosts.yml      # 정적 인벤토리 (7 hosts)
+├── group_vars/all/
+│   ├── vars.yml             # 공통 변수 (IP, 포트, 버전)
+│   └── vault.yml            # ansible-vault 암호화 시크릿
+└── roles/
+    ├── common/tasks/        # 재사용 태스크 (service_user, binary_download, openrc_service)
+    ├── traefik/             # CP 리버스 프록시
+    ├── authelia/            # SSO/OIDC (해시 생성 포함)
+    ├── postgresql/          # DB + pgAdmin (pgAdmin 서버 자동 등록 포함)
+    ├── valkey/              # 캐시 + Redis Commander
+    ├── monitoring/          # Prometheus, Grafana, Loki, Jaeger
+    └── jenkins/             # CI/CD
+```
+
+### Common Role Tasks
+
+`include_role: name=common tasks_from=<task>`로 호출:
+
+- `service_user`: 시스템 유저/그룹 생성 + 디렉토리 (vars: `svc_name`, `svc_dirs`)
+- `binary_download`: 아카이브 다운로드 + 바이너리 설치 (vars: `bin_name`, `bin_url`, `bin_src_path`, `bin_dest`)
+- `openrc_service`: OpenRC 서비스 파일 배포 + 활성화 + 시작 (vars: `openrc_name`, `openrc_src`)
 
 ### OpenTofu Patterns
 
 - bpg/proxmox provider with SSH agent auth (`ssh { agent = true }`)
 - Chaekpool containers use `for_each` over a `containers` map variable in `variables.tf`
+- `null_resource` for Ansible bootstrap (openssh + python3 + sshd)
 - Local state (no remote backend)
 - Provider config is identical across both terraform directories
 
-### OpenRC Service Files
-
-All services use `supervise-daemon` with consistent structure: `command`, `command_args`, `command_user`, `pidfile`, `output_log`/`error_log`, and `depend()` block. Config files live in `scripts/<service>/configs/*.openrc`.
-
 ### Secrets Management
-
-Secrets are managed through two env files (gitignored, create from `.template` files):
 
 | File | Purpose |
 |------|---------|
 | `core/.core.env` | Proxmox API token, SSH public key |
-| `service/chaekpool/.chaekpool.env` | Service passwords, Authelia secrets, OIDC client secrets |
+| `service/chaekpool/ansible/group_vars/all/vault.yml` | 서비스 시크릿 (ansible-vault 암호화, git 커밋 가능) |
 
-Default passwords in `service/chaekpool/scripts/common.sh` are `changeme`. `.chaekpool.env`에서 override. When changing, sync across: `common.sh`, `valkey.conf` (requirepass), `application.yml` (spring datasource/redis), `grafana.ini` (admin_password).
+Vault 비밀번호: `~/.vault_pass` (repo 외부). `ansible.cfg`에서 참조.
 
 ### Adding a New Service
 
 1. Add entry to `containers` map in `service/chaekpool/terraform/variables.tf`
-2. `tofu apply` to create container
-3. Create deploy script in `service/chaekpool/scripts/<service>/`
-4. Add Traefik route in `service/chaekpool/scripts/traefik/configs/services.yml`
-5. Managed Traefik wildcard (`*.cp.codingmon.dev`) auto-forwards — no change needed there
+2. `tofu apply` to create container (자동으로 SSH+Python 부트스트랩)
+3. Create Ansible role in `service/chaekpool/ansible/roles/<service>/`
+4. Add role to `service/chaekpool/ansible/site.yml`
+5. Add Traefik route in `service/chaekpool/ansible/roles/traefik/templates/services.yml.j2`
+6. Managed Traefik wildcard (`*.cp.codingmon.dev`) auto-forwards — no change needed there
