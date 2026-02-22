@@ -86,7 +86,7 @@ resource "proxmox_virtual_environment_vm" "jenkins" {
   }
 
   disk {
-    datastore_id = "local-lvm"
+    datastore_id = "local"
     file_id      = proxmox_virtual_environment_download_file.alpine_cloud.id
     interface    = "virtio0"
     size         = var.jenkins_vm.disk
@@ -97,6 +97,8 @@ resource "proxmox_virtual_environment_vm" "jenkins" {
   }
 
   initialization {
+    datastore_id = "local"
+
     ip_config {
       ipv4 {
         address = var.jenkins_vm.ip
@@ -120,6 +122,8 @@ resource "proxmox_virtual_environment_vm" "jenkins" {
 resource "null_resource" "jenkins_bootstrap" {
   provisioner "remote-exec" {
     inline = [
+      "echo 'nameserver ${var.svc_gateway}' > /etc/resolv.conf",
+      "while fuser /lib/apk/db/lock >/dev/null 2>&1; do sleep 1; done",
       "apk add --no-cache openssh python3 ca-certificates docker docker-cli-compose",
       "ssh-keygen -A",
       "rc-service sshd start",
