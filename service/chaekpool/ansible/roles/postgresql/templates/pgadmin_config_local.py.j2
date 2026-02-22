@@ -8,6 +8,7 @@ SQLITE_PATH = "{{ pgadmin_data_dir }}/pgadmin4.db"
 SESSION_DB_PATH = "{{ pgadmin_data_dir }}/sessions"
 STORAGE_DIR = "{{ pgadmin_data_dir }}/storage"
 
+MASTER_PASSWORD_REQUIRED = False
 AUTHENTICATION_SOURCES = ['oauth2', 'internal']
 OAUTH2_AUTO_CREATE_USER = True
 OAUTH2_CONFIG = [{

@@ -192,6 +192,14 @@
   when: not _pgadmin_db.stat.exists
   changed_when: true
 
+- name: Deploy pgAdmin .pgpass
+  ansible.builtin.copy:
+    content: "{{ ip_postgresql }}:{{ port_postgresql }}:*:{{ pg_user }}:{{ vault_pg_password }}"
+    dest: /var/lib/pgadmin/.pgpass
+    owner: pgadmin
+    group: pgadmin
+    mode: "0600"
+
 - name: Deploy pgAdmin servers.json
   ansible.builtin.template:
     src: pgadmin_servers.json.j2
