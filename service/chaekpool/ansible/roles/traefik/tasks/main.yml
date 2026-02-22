@@ -1,0 +1,67 @@
+---
+- name: Install dependencies
+  ansible.builtin.apk:
+    name:
+      - libcap-utils
+    state: present
+    update_cache: true
+
+- name: Create traefik user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: traefik
+    svc_dirs:
+      - "{{ traefik_config_dir }}"
+      - "{{ traefik_config_dir }}/conf.d"
+      - "{{ traefik_log_dir }}"
+
+- name: Install traefik binary
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: binary_download
+  vars:
+    bin_name: traefik
+    bin_version: "{{ traefik_version }}"
+    bin_url: "https://github.com/traefik/traefik/releases/download/v{{ traefik_version }}/traefik_v{{ traefik_version }}_linux_amd64.tar.gz"
+    bin_src_path: traefik
+    bin_dest: "{{ traefik_bin }}"
+
+- name: Check cap_net_bind_service on traefik
+  ansible.builtin.command:
+    cmd: getcap {{ traefik_bin }}
+  register: _traefik_caps
+  changed_when: false
+
+- name: Set cap_net_bind_service on traefik
+  ansible.builtin.command:
+    cmd: setcap cap_net_bind_service=+ep {{ traefik_bin }}
+  when: "'cap_net_bind_service' not in _traefik_caps.stdout"
+  changed_when: true
+
+- name: Deploy static config
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: "{{ traefik_config_dir }}/traefik.yml"
+    owner: traefik
+    group: traefik
+    mode: "0644"
+  notify: restart traefik
+
+- name: Deploy dynamic config (services)
+  ansible.builtin.template:
+    src: services.yml.j2
+    dest: "{{ traefik_config_dir }}/conf.d/services.yml"
+    owner: traefik
+    group: traefik
+    mode: "0644"
+  notify: restart traefik
+
+- name: Deploy OpenRC service
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: openrc_service
+  vars:
+    openrc_name: traefik
+    openrc_src: traefik.openrc

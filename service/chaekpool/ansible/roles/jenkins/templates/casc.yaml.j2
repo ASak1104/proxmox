@@ -1,0 +1,17 @@
+jenkins:
+  securityRealm:
+    oic:
+      clientId: "jenkins"
+      clientSecret: "{{ vault_authelia_oidc_jenkins_secret }}"
+      serverConfiguration:
+        wellKnown:
+          wellKnownOpenIDConfigurationUrl: "https://authelia.{{ base_domain }}/.well-known/openid-configuration"
+      userNameField: "preferred_username"
+      fullNameFieldName: "name"
+      emailFieldName: "email"
+      groupsFieldName: "groups"
+      logoutFromOpenidProvider: true
+      postLogoutRedirectUrl: "https://jenkins.{{ base_domain }}/"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false

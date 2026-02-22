@@ -1,0 +1,20 @@
+#!/sbin/openrc-run
+
+description="Prometheus Monitoring System"
+command="/opt/prometheus/prometheus"
+command_args="--config.file=/etc/prometheus/prometheus.yml \
+  --storage.tsdb.path=/var/lib/prometheus \
+  --storage.tsdb.retention.time=30d \
+  --web.listen-address=0.0.0.0:9090"
+command_user="prometheus:prometheus"
+
+supervisor="supervise-daemon"
+respawn_max=0
+respawn_delay=5
+respawn_period=60
+output_log="/var/log/prometheus.log"
+error_log="/var/log/prometheus.log"
+
+depend() {
+    need net
+}

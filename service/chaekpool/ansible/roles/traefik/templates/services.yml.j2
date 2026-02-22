@@ -1,0 +1,63 @@
+http:
+  routers:
+    # --- IAM (미들웨어 없음 — 로그인 페이지 접근 허용) ---
+    authelia:
+      rule: "Host(`authelia.{{ base_domain }}`)"
+      service: authelia
+      entryPoints:
+        - web
+
+    # --- App (bypass — 자체 인증) ---
+    kopring:
+      rule: "Host(`api.{{ base_domain }}`)"
+      service: kopring
+      entryPoints:
+        - web
+
+    # --- OIDC 서비스 (미들웨어 없음 — 네이티브 OIDC 인증) ---
+    pgadmin:
+      rule: "Host(`pgadmin.{{ base_domain }}`)"
+      service: pgadmin
+      entryPoints:
+        - web
+    grafana:
+      rule: "Host(`grafana.{{ base_domain }}`)"
+      service: grafana
+      entryPoints:
+        - web
+    jenkins:
+      rule: "Host(`jenkins.{{ base_domain }}`)"
+      service: jenkins
+      entryPoints:
+        - web
+
+  services:
+    # --- IAM ---
+    authelia:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ip_authelia }}:{{ port_authelia }}"
+
+    # --- App ---
+    kopring:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ip_kopring }}:{{ port_kopring }}"
+
+    # --- Data 관리 UI ---
+    pgadmin:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ip_postgresql }}:{{ port_pgadmin }}"
+
+    # --- Monitoring ---
+    grafana:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ip_monitoring }}:{{ port_grafana }}"
+
+    # --- CI/CD ---
+    jenkins:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ip_jenkins }}:{{ port_jenkins }}"

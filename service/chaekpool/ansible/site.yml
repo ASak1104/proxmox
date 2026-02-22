@@ -1,0 +1,28 @@
+---
+# Chaekpool 전체 배포 플레이북
+# deploy-all.sh의 2-wave 병렬 구조 유지:
+#   Wave 1: 독립 서비스 (Traefik, Authelia, PostgreSQL, Valkey, Monitoring, Jenkins)
+#   Wave 2: 의존 서비스 (현재 없음 — Kopring 제외)
+#
+# 사용법:
+#   전체 배포:   ansible-playbook site.yml
+#   단일 서비스: ansible-playbook site.yml -l cp-traefik
+#   드라이런:    ansible-playbook site.yml --check --diff
+#   설정만:      ansible-playbook site.yml --tags config
+
+- name: "Wave 1: Independent services"
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: traefik
+      when: inventory_hostname == 'cp-traefik'
+    - role: authelia
+      when: inventory_hostname == 'cp-authelia'
+    - role: postgresql
+      when: inventory_hostname == 'cp-postgresql'
+    - role: valkey
+      when: inventory_hostname == 'cp-valkey'
+    - role: monitoring
+      when: inventory_hostname == 'cp-monitoring'
+    - role: jenkins
+      when: inventory_hostname == 'cp-jenkins'

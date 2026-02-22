@@ -1,0 +1,103 @@
+---
+# Authelia Configuration
+
+server:
+  address: "tcp://0.0.0.0:{{ port_authelia }}"
+
+log:
+  level: "info"
+  file_path: "{{ authelia_log_dir }}/authelia.log"
+
+identity_validation:
+  reset_password:
+    jwt_secret: "{{ vault_authelia_jwt_secret }}"
+
+authentication_backend:
+  file:
+    path: "{{ authelia_config_dir }}/users_database.yml"
+    password:
+      algorithm: "argon2id"
+
+access_control:
+  default_policy: "deny"
+  rules:
+    # Kopring API — 자체 인증
+    - domain: "api.{{ base_domain }}"
+      policy: "bypass"
+    # Authelia 포탈 자체
+    - domain: "authelia.{{ base_domain }}"
+      policy: "bypass"
+    # 나머지 *.cp.codingmon.dev — 1단계 인증
+    - domain: "*.{{ base_domain }}"
+      policy: "one_factor"
+
+session:
+  secret: "{{ vault_authelia_session_secret }}"
+  cookies:
+    - domain: "{{ base_domain }}"
+      authelia_url: "https://authelia.{{ base_domain }}"
+      default_redirection_url: "https://grafana.{{ base_domain }}"
+
+storage:
+  encryption_key: "{{ vault_authelia_storage_encryption_key }}"
+  local:
+    path: "{{ authelia_data_dir }}/db.sqlite3"
+
+notifier:
+  filesystem:
+    filename: "{{ authelia_data_dir }}/notification.txt"
+
+identity_providers:
+  oidc:
+    hmac_secret: "{{ vault_authelia_oidc_hmac_secret }}"
+    jwks:
+      - key_id: "main"
+        algorithm: "RS256"
+        use: "sig"
+        key: {% raw %}{{ secret "/etc/authelia/oidc.jwks.rsa.4096.pem" | mindent 10 "|" }}{% endraw %}
+
+    clients:
+      - client_id: "grafana"
+        client_name: "Grafana"
+        client_secret: "{{ _oidc_grafana_hash }}"
+        authorization_policy: "one_factor"
+        require_pkce: true
+        pkce_challenge_method: "S256"
+        redirect_uris:
+          - "https://grafana.{{ base_domain }}/login/generic_oauth"
+        scopes:
+          - "openid"
+          - "profile"
+          - "email"
+          - "groups"
+        token_endpoint_auth_method: "client_secret_basic"
+
+      - client_id: "jenkins"
+        client_name: "Jenkins"
+        client_secret: "{{ _oidc_jenkins_hash }}"
+        authorization_policy: "one_factor"
+        require_pkce: false
+        redirect_uris:
+          - "https://jenkins.{{ base_domain }}/securityRealm/finishLogin"
+        scopes:
+          - "openid"
+          - "offline_access"
+          - "profile"
+          - "email"
+          - "groups"
+          - "address"
+          - "phone"
+        token_endpoint_auth_method: "client_secret_basic"
+
+      - client_id: "pgadmin"
+        client_name: "pgAdmin"
+        client_secret: "{{ _oidc_pgadmin_hash }}"
+        authorization_policy: "one_factor"
+        require_pkce: false
+        redirect_uris:
+          - "https://pgadmin.{{ base_domain }}/oauth2/authorize"
+        scopes:
+          - "openid"
+          - "profile"
+          - "email"
+        token_endpoint_auth_method: "client_secret_basic"

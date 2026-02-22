@@ -1,0 +1,72 @@
+---
+# --- Valkey ---
+- name: Install Valkey
+  ansible.builtin.apk:
+    name: valkey
+    state: present
+    update_cache: true
+
+- name: Create Valkey directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: valkey
+    group: valkey
+    mode: "0755"
+  loop:
+    - "{{ valkey_config_dir }}"
+    - "{{ valkey_data_dir }}"
+    - "{{ valkey_log_dir }}"
+
+- name: Deploy valkey.conf
+  ansible.builtin.template:
+    src: valkey.conf.j2
+    dest: "{{ valkey_config_dir }}/valkey.conf"
+    owner: valkey
+    group: valkey
+    mode: "0640"
+  notify: restart valkey
+
+- name: Deploy Valkey OpenRC service
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: openrc_service
+  vars:
+    openrc_name: valkey
+    openrc_src: valkey.openrc
+
+# --- Redis Commander ---
+- name: Install Node.js and npm
+  ansible.builtin.apk:
+    name:
+      - nodejs
+      - npm
+    state: present
+
+- name: Install redis-commander globally
+  community.general.npm:
+    name: redis-commander
+    global: true
+    state: present
+
+- name: Create rediscmd user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: rediscmd
+    svc_home: /dev/null
+    svc_dirs: []
+
+- name: Deploy redis-commander OpenRC service
+  ansible.builtin.template:
+    src: redis-commander.openrc.j2
+    dest: /etc/init.d/redis-commander
+    mode: "0755"
+  notify: restart redis-commander
+
+- name: Enable and start redis-commander
+  ansible.builtin.service:
+    name: redis-commander
+    enabled: true
+    state: started

@@ -1,0 +1,23 @@
+import os
+SERVER_MODE = True
+DEFAULT_SERVER = "0.0.0.0"
+DEFAULT_SERVER_PORT = {{ port_pgadmin }}
+DATA_DIR = "{{ pgadmin_data_dir }}"
+LOG_FILE = "{{ pgadmin_log_dir }}/pgadmin.log"
+SQLITE_PATH = "{{ pgadmin_data_dir }}/pgadmin4.db"
+SESSION_DB_PATH = "{{ pgadmin_data_dir }}/sessions"
+STORAGE_DIR = "{{ pgadmin_data_dir }}/storage"
+
+AUTHENTICATION_SOURCES = ['oauth2', 'internal']
+OAUTH2_AUTO_CREATE_USER = True
+OAUTH2_CONFIG = [{
+    'OAUTH2_NAME': 'authelia',
+    'OAUTH2_DISPLAY_NAME': 'Authelia SSO',
+    'OAUTH2_CLIENT_ID': 'pgadmin',
+    'OAUTH2_CLIENT_SECRET': '{{ vault_authelia_oidc_pgadmin_secret }}',
+    'OAUTH2_TOKEN_URL': 'https://authelia.{{ base_domain }}/api/oidc/token',
+    'OAUTH2_AUTHORIZATION_URL': 'https://authelia.{{ base_domain }}/api/oidc/authorization',
+    'OAUTH2_USERINFO_ENDPOINT': 'https://authelia.{{ base_domain }}/api/oidc/userinfo',
+    'OAUTH2_SERVER_METADATA_URL': 'https://authelia.{{ base_domain }}/.well-known/openid-configuration',
+    'OAUTH2_SCOPE': 'openid email profile',
+}]

@@ -1,0 +1,20 @@
+---
+- name: restart prometheus
+  ansible.builtin.service:
+    name: prometheus
+    state: restarted
+
+- name: restart grafana
+  ansible.builtin.service:
+    name: grafana
+    state: restarted
+
+- name: restart loki
+  ansible.builtin.service:
+    name: loki
+    state: restarted
+
+- name: restart jaeger
+  ansible.builtin.service:
+    name: jaeger
+    state: restarted

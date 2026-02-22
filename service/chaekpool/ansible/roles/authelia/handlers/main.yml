@@ -1,0 +1,5 @@
+---
+- name: restart authelia
+  ansible.builtin.service:
+    name: authelia
+    state: restarted

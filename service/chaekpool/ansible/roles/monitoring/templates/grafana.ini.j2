@@ -1,0 +1,44 @@
+[server]
+http_port = {{ port_grafana }}
+root_url = https://grafana.{{ base_domain }}
+
+[security]
+admin_user = admin
+admin_password = {{ vault_grafana_admin_password }}
+
+[paths]
+data = {{ grafana_data_dir }}
+logs = {{ grafana_log_dir }}
+plugins = {{ grafana_data_dir }}/plugins
+provisioning = {{ grafana_config_dir }}/provisioning
+
+[users]
+allow_sign_up = true
+
+[auth]
+oauth_allow_insecure_email_lookup = true
+
+[log]
+mode = file
+level = info
+
+[log.file]
+log_rotate = true
+max_lines = 100000
+
+[auth.generic_oauth]
+enabled = true
+allow_sign_up = true
+name = Authelia
+client_id = grafana
+client_secret = {{ vault_authelia_oidc_grafana_secret }}
+scopes = openid profile email groups
+auth_url = https://authelia.{{ base_domain }}/api/oidc/authorization
+token_url = https://authelia.{{ base_domain }}/api/oidc/token
+api_url = https://authelia.{{ base_domain }}/api/oidc/userinfo
+login_attribute_path = preferred_username
+email_attribute_path = email
+groups_attribute_path = groups
+name_attribute_path = name
+use_pkce = true
+role_attribute_path = contains(groups[*], 'admins') && 'Admin' || 'Viewer'

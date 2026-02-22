@@ -1,0 +1,21 @@
+---
+- name: Install common dependencies
+  ansible.builtin.apk:
+    name:
+      - wget
+      - tar
+      - unzip
+    state: present
+    update_cache: true
+
+- name: Deploy Prometheus
+  ansible.builtin.include_tasks: prometheus.yml
+
+- name: Deploy Grafana
+  ansible.builtin.include_tasks: grafana.yml
+
+- name: Deploy Loki
+  ansible.builtin.include_tasks: loki.yml
+
+- name: Deploy Jaeger
+  ansible.builtin.include_tasks: jaeger.yml

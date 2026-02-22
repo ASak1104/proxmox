@@ -1,0 +1,5 @@
+---
+pg_data_dir: /var/lib/postgresql/18/data
+pgadmin_home: /opt/pgadmin4
+pgadmin_data_dir: /var/lib/pgadmin
+pgadmin_log_dir: /var/log/pgadmin

@@ -1,0 +1,25 @@
+---
+# OpenRC 서비스 파일 배포 + 활성화 + 시작
+# 사용법:
+#   include_role:
+#     name: common
+#     tasks_from: openrc_service
+#   vars:
+#     openrc_name: traefik
+#     openrc_src: traefik.openrc    (calling role의 files/ 기준)
+
+- name: "Deploy {{ openrc_name }} service file"
+  ansible.builtin.copy:
+    src: "{{ openrc_src }}"
+    dest: "/etc/init.d/{{ openrc_name }}"
+    mode: "0755"
+
+- name: "Enable {{ openrc_name }} at boot"
+  ansible.builtin.service:
+    name: "{{ openrc_name }}"
+    enabled: true
+
+- name: "Start {{ openrc_name }}"
+  ansible.builtin.service:
+    name: "{{ openrc_name }}"
+    state: started

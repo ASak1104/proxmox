@@ -1,0 +1,4 @@
+---
+traefik_bin: /usr/local/bin/traefik
+traefik_config_dir: /etc/traefik
+traefik_log_dir: /var/log/traefik

@@ -1,0 +1,4 @@
+---
+jenkins_home: /var/lib/jenkins
+jenkins_opt: /opt/jenkins
+jenkins_log_dir: /var/log/jenkins

@@ -1,0 +1,115 @@
+---
+- name: Create grafana user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: grafana
+    svc_home: "{{ grafana_home }}"
+    svc_dirs:
+      - "{{ grafana_home }}"
+      - "{{ grafana_config_dir }}"
+      - "{{ grafana_config_dir }}/provisioning/datasources"
+      - "{{ grafana_config_dir }}/provisioning/dashboards/json"
+      - "{{ grafana_data_dir }}"
+      - "{{ grafana_log_dir }}"
+
+- name: Check grafana binary
+  ansible.builtin.stat:
+    path: "{{ grafana_home }}/bin/grafana-server"
+  register: _grafana_check
+
+- name: Download and install Grafana
+  when: not _grafana_check.stat.exists or (force_download | default(false) | bool)
+  block:
+    - name: Download Grafana archive
+      ansible.builtin.get_url:
+        url: "https://dl.grafana.com/oss/release/grafana-{{ grafana_version }}.linux-amd64.tar.gz"
+        dest: /tmp/grafana-archive
+        mode: "0644"
+
+    - name: Create temp directory for Grafana
+      ansible.builtin.file:
+        path: /tmp/grafana-extract
+        state: directory
+        mode: "0755"
+
+    - name: Extract Grafana archive
+      ansible.builtin.unarchive:
+        src: /tmp/grafana-archive
+        dest: /tmp/grafana-extract
+        remote_src: true
+
+    - name: Find Grafana extracted directory
+      ansible.builtin.find:
+        paths: /tmp/grafana-extract
+        file_type: directory
+        recurse: false
+      register: _grafana_dirs
+
+    - name: Copy Grafana files
+      ansible.builtin.copy:
+        src: "{{ _grafana_dirs.files[0].path }}/"
+        dest: "{{ grafana_home }}/"
+        remote_src: true
+      when: _grafana_dirs.files | length > 0
+
+    - name: Set Grafana ownership
+      ansible.builtin.file:
+        path: "{{ grafana_home }}"
+        state: directory
+        owner: grafana
+        group: grafana
+        recurse: true
+
+    - name: Clean up Grafana temp files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/grafana-archive
+        - /tmp/grafana-extract
+
+- name: Deploy grafana.ini
+  ansible.builtin.template:
+    src: grafana.ini.j2
+    dest: "{{ grafana_config_dir }}/grafana.ini"
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  notify: restart grafana
+
+- name: Deploy datasources provisioning
+  ansible.builtin.copy:
+    src: datasources.yml
+    dest: "{{ grafana_config_dir }}/provisioning/datasources/datasources.yml"
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  notify: restart grafana
+
+- name: Deploy dashboards provisioning
+  ansible.builtin.copy:
+    src: dashboards.yml
+    dest: "{{ grafana_config_dir }}/provisioning/dashboards/dashboards.yml"
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  notify: restart grafana
+
+- name: Deploy dashboard JSON files
+  ansible.builtin.copy:
+    src: dashboards/chaekpool-api-overview.json
+    dest: "{{ grafana_config_dir }}/provisioning/dashboards/json/chaekpool-api-overview.json"
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  notify: restart grafana
+
+- name: Deploy Grafana OpenRC service
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: openrc_service
+  vars:
+    openrc_name: grafana
+    openrc_src: grafana.openrc

@@ -1,0 +1,57 @@
+---
+# 바이너리 아카이브 다운로드 + 설치
+# 사용법:
+#   include_role:
+#     name: common
+#     tasks_from: binary_download
+#   vars:
+#     bin_name: traefik
+#     bin_version: "3.6.7"
+#     bin_url: "https://..."
+#     bin_src_path: traefik              (아카이브 내 바이너리 경로)
+#     bin_dest: /usr/local/bin/traefik
+#     bin_owner: traefik                 (선택, 기본값 root)
+#     bin_group: traefik                 (선택, 기본값 root)
+
+- name: "Check {{ bin_name }} binary"
+  ansible.builtin.stat:
+    path: "{{ bin_dest }}"
+  register: _bin_check
+
+- name: "Download and install {{ bin_name }}"
+  when: not _bin_check.stat.exists or (force_download | default(false) | bool)
+  block:
+    - name: "Download {{ bin_name }} archive"
+      ansible.builtin.get_url:
+        url: "{{ bin_url }}"
+        dest: "/tmp/{{ bin_name }}-archive"
+        mode: "0644"
+
+    - name: "Create temp directory for {{ bin_name }}"
+      ansible.builtin.file:
+        path: "/tmp/{{ bin_name }}-extract"
+        state: directory
+        mode: "0755"
+
+    - name: "Extract {{ bin_name }} archive"
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ bin_name }}-archive"
+        dest: "/tmp/{{ bin_name }}-extract"
+        remote_src: true
+
+    - name: "Install {{ bin_name }} binary"
+      ansible.builtin.copy:
+        src: "/tmp/{{ bin_name }}-extract/{{ bin_src_path }}"
+        dest: "{{ bin_dest }}"
+        owner: "{{ bin_owner | default('root') }}"
+        group: "{{ bin_group | default('root') }}"
+        mode: "0755"
+        remote_src: true
+
+    - name: "Clean up {{ bin_name }} temp files"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/{{ bin_name }}-archive"
+        - "/tmp/{{ bin_name }}-extract"

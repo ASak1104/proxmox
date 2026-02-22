@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+
+description="Jaeger Distributed Tracing"
+command="/opt/jaeger/jaeger"
+command_args="--config /etc/jaeger/jaeger.yml"
+command_user="jaeger:jaeger"
+
+supervisor="supervise-daemon"
+respawn_max=0
+respawn_delay=5
+respawn_period=60
+output_log="/var/log/jaeger.log"
+error_log="/var/log/jaeger.log"
+
+depend() {
+    need net
+}

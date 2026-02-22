@@ -1,0 +1,10 @@
+---
+- name: restart valkey
+  ansible.builtin.service:
+    name: valkey
+    state: restarted
+
+- name: restart redis-commander
+  ansible.builtin.service:
+    name: redis-commander
+    state: restarted

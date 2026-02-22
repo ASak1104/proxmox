@@ -1,0 +1,89 @@
+---
+- name: Install Java and fonts
+  ansible.builtin.apk:
+    name:
+      - openjdk17
+      - fontconfig
+      - freetype
+      - ttf-dejavu
+    state: present
+    update_cache: true
+
+- name: Create jenkins user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: jenkins
+    svc_home: "{{ jenkins_home }}"
+    svc_dirs:
+      - "{{ jenkins_home }}"
+      - "{{ jenkins_opt }}"
+      - "{{ jenkins_log_dir }}"
+
+- name: Download Jenkins WAR
+  ansible.builtin.get_url:
+    url: "https://get.jenkins.io/war-stable/{{ jenkins_version }}/jenkins.war"
+    dest: "{{ jenkins_opt }}/jenkins.war"
+    owner: jenkins
+    group: jenkins
+    mode: "0644"
+  register: _jenkins_war
+
+- name: Download plugin manager
+  ansible.builtin.get_url:
+    url: "https://github.com/jenkinsci/plugin-installation-manager-tool/releases/download/{{ jenkins_plugin_manager_version }}/jenkins-plugin-manager-{{ jenkins_plugin_manager_version }}.jar"
+    dest: /tmp/jenkins-plugin-manager.jar
+    mode: "0644"
+  when: _jenkins_war.changed
+
+- name: Install plugins
+  ansible.builtin.command:
+    cmd: >
+      java -jar /tmp/jenkins-plugin-manager.jar
+      -w {{ jenkins_opt }}/jenkins.war
+      -d {{ jenkins_home }}/plugins
+      -p oic-auth configuration-as-code
+  when: _jenkins_war.changed
+  changed_when: true
+
+- name: Set plugin directory ownership
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}/plugins"
+    state: directory
+    owner: jenkins
+    group: jenkins
+    recurse: true
+  when: _jenkins_war.changed
+
+- name: Clean up plugin manager
+  ansible.builtin.file:
+    path: /tmp/jenkins-plugin-manager.jar
+    state: absent
+  when: _jenkins_war.changed
+
+- name: Deploy JCasC config
+  ansible.builtin.template:
+    src: casc.yaml.j2
+    dest: "{{ jenkins_home }}/casc.yaml"
+    owner: jenkins
+    group: jenkins
+    mode: "0600"
+  notify: restart jenkins
+
+- name: Deploy jenkins wrapper script
+  ansible.builtin.template:
+    src: jenkins-wrapper.sh.j2
+    dest: "{{ jenkins_opt }}/jenkins-wrapper.sh"
+    owner: jenkins
+    group: jenkins
+    mode: "0755"
+  notify: restart jenkins
+
+- name: Deploy Jenkins OpenRC service
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: openrc_service
+  vars:
+    openrc_name: jenkins
+    openrc_src: jenkins.openrc

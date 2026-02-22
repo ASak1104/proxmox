@@ -1,0 +1,50 @@
+---
+- name: Create prometheus user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: prometheus
+    svc_dirs:
+      - "{{ prometheus_bin_dir }}"
+      - "{{ prometheus_config_dir }}"
+      - "{{ prometheus_data_dir }}"
+
+- name: Install prometheus binary
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: binary_download
+  vars:
+    bin_name: prometheus
+    bin_version: "{{ prometheus_version }}"
+    bin_url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    bin_src_path: "prometheus-{{ prometheus_version }}.linux-amd64/prometheus"
+    bin_dest: "{{ prometheus_bin_dir }}/prometheus"
+
+- name: Install promtool
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: binary_download
+  vars:
+    bin_name: promtool
+    bin_version: "{{ prometheus_version }}"
+    bin_url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    bin_src_path: "prometheus-{{ prometheus_version }}.linux-amd64/promtool"
+    bin_dest: "{{ prometheus_bin_dir }}/promtool"
+
+- name: Deploy prometheus.yml
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ prometheus_config_dir }}/prometheus.yml"
+    owner: prometheus
+    group: prometheus
+    mode: "0644"
+  notify: restart prometheus
+
+- name: Deploy Prometheus OpenRC service
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: openrc_service
+  vars:
+    openrc_name: prometheus
+    openrc_src: prometheus.openrc

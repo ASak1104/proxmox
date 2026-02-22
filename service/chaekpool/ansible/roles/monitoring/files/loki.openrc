@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+
+description="Grafana Loki Log Aggregation"
+command="/opt/loki/loki"
+command_args="-config.file=/etc/loki/loki.yml"
+command_user="loki:loki"
+
+supervisor="supervise-daemon"
+respawn_max=0
+respawn_delay=5
+respawn_period=60
+output_log="/var/log/loki.log"
+error_log="/var/log/loki.log"
+
+depend() {
+    need net
+}

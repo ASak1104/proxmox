@@ -1,0 +1,27 @@
+# CP Traefik 정적 설정
+# SSL 종료는 OPNsense HAProxy(VM 102)에서 처리, 여기서는 HTTP만 수신
+entryPoints:
+  web:
+    address: ":{{ port_traefik }}"
+    forwardedHeaders:
+      trustedIPs:
+        - "{{ svc_gateway }}"
+
+ping:
+  entryPoint: web
+
+providers:
+  file:
+    directory: "{{ traefik_config_dir }}/conf.d"
+    watch: true
+
+api:
+  dashboard: true
+  insecure: true
+
+log:
+  level: INFO
+  filePath: "{{ traefik_log_dir }}/traefik.log"
+
+accessLog:
+  filePath: "{{ traefik_log_dir }}/access.log"

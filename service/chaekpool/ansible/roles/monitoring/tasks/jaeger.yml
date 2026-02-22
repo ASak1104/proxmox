@@ -1,0 +1,88 @@
+---
+- name: Create jaeger user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: jaeger
+    svc_home: "{{ jaeger_data_dir }}"
+    svc_dirs:
+      - "{{ jaeger_bin_dir }}"
+      - "{{ jaeger_config_dir }}"
+      - "{{ jaeger_data_dir }}"
+      - "{{ jaeger_data_dir }}/keys"
+      - "{{ jaeger_data_dir }}/values"
+
+- name: Check jaeger binary
+  ansible.builtin.stat:
+    path: "{{ jaeger_bin_dir }}/jaeger"
+  register: _jaeger_check
+
+- name: Download and install Jaeger
+  when: not _jaeger_check.stat.exists or (force_download | default(false) | bool)
+  block:
+    - name: Download Jaeger archive
+      ansible.builtin.get_url:
+        url: "https://github.com/jaegertracing/jaeger/releases/download/v{{ jaeger_version }}/jaeger-{{ jaeger_version }}-linux-amd64.tar.gz"
+        dest: /tmp/jaeger-archive
+        mode: "0644"
+
+    - name: Create temp directory for Jaeger
+      ansible.builtin.file:
+        path: /tmp/jaeger-extract
+        state: directory
+        mode: "0755"
+
+    - name: Extract Jaeger archive
+      ansible.builtin.unarchive:
+        src: /tmp/jaeger-archive
+        dest: /tmp/jaeger-extract
+        remote_src: true
+
+    - name: Find Jaeger binary
+      ansible.builtin.find:
+        paths: /tmp/jaeger-extract
+        patterns:
+          - jaeger
+          - jaeger-all-in-one
+        recurse: true
+        file_type: file
+      register: _jaeger_bins
+
+    - name: Install Jaeger binary
+      ansible.builtin.copy:
+        src: "{{ _jaeger_bins.files[0].path }}"
+        dest: "{{ jaeger_bin_dir }}/jaeger"
+        remote_src: true
+        mode: "0755"
+      when: _jaeger_bins.files | length > 0
+
+    - name: Set Jaeger binary permissions
+      ansible.builtin.file:
+        path: "{{ jaeger_bin_dir }}/jaeger"
+        mode: "0755"
+
+    - name: Clean up Jaeger temp files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/jaeger-archive
+        - /tmp/jaeger-extract
+
+- name: Deploy jaeger.yml
+  ansible.builtin.copy:
+    src: jaeger.yml
+    dest: "{{ jaeger_config_dir }}/jaeger.yml"
+    owner: jaeger
+    group: jaeger
+    mode: "0644"
+  notify: restart jaeger
+
+- name: Deploy Jaeger OpenRC service
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: openrc_service
+  vars:
+    openrc_name: jaeger
+    openrc_src: jaeger.openrc

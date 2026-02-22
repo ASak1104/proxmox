@@ -1,0 +1,255 @@
+---
+# --- PostgreSQL ---
+- name: Install PostgreSQL
+  ansible.builtin.apk:
+    name:
+      - postgresql
+      - postgresql-client
+      - sudo
+    state: present
+    update_cache: true
+
+- name: Create PostgreSQL data directory
+  ansible.builtin.file:
+    path: "{{ pg_data_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0700"
+
+- name: Check if PostgreSQL is initialized
+  ansible.builtin.stat:
+    path: "{{ pg_data_dir }}/postgresql.conf"
+  register: _pg_initialized
+
+- name: Initialize PostgreSQL database
+  ansible.builtin.command:
+    cmd: >
+      su - postgres -s /bin/sh -c
+      "initdb -D {{ pg_data_dir }} -U postgres --locale=en_US.UTF-8 --encoding=UTF-8"
+  when: not _pg_initialized.stat.exists
+  changed_when: true
+
+- name: Configure listen_addresses
+  ansible.builtin.lineinfile:
+    path: "{{ pg_data_dir }}/postgresql.conf"
+    regexp: "^#?listen_addresses\\s*="
+    line: "listen_addresses = '*'"
+  notify: restart postgresql
+
+- name: Configure port
+  ansible.builtin.lineinfile:
+    path: "{{ pg_data_dir }}/postgresql.conf"
+    regexp: "^#?port\\s*="
+    line: "port = {{ port_postgresql }}"
+  notify: restart postgresql
+
+- name: Deploy pg_hba.conf
+  ansible.builtin.copy:
+    src: pg_hba.conf
+    dest: "{{ pg_data_dir }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  notify: restart postgresql
+
+- name: Deploy PostgreSQL OpenRC service
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: openrc_service
+  vars:
+    openrc_name: postgresql
+    openrc_src: postgresql.openrc
+
+- name: Wait for PostgreSQL to be ready
+  ansible.builtin.command:
+    cmd: su - postgres -s /bin/sh -c "pg_isready -q"
+  register: _pg_ready
+  retries: 30
+  delay: 1
+  until: _pg_ready.rc == 0
+  changed_when: false
+
+- name: Install psycopg2 for Ansible postgresql modules
+  ansible.builtin.apk:
+    name: py3-psycopg2
+    state: present
+
+- name: Create database user
+  community.postgresql.postgresql_user:
+    name: "{{ pg_user }}"
+    password: "{{ vault_pg_password }}"
+    state: present
+  become: true
+  become_user: postgres
+
+- name: Create database
+  community.postgresql.postgresql_db:
+    name: "{{ pg_db }}"
+    owner: "{{ pg_user }}"
+    encoding: UTF-8
+    lc_collate: en_US.UTF-8
+    lc_ctype: en_US.UTF-8
+    state: present
+  become: true
+  become_user: postgres
+
+- name: Grant database privileges
+  community.postgresql.postgresql_privs:
+    database: "{{ pg_db }}"
+    roles: "{{ pg_user }}"
+    type: database
+    privs: ALL
+    state: present
+  become: true
+  become_user: postgres
+
+# --- pgAdmin 4 ---
+- name: Install pgAdmin dependencies
+  ansible.builtin.apk:
+    name:
+      - python3
+      - py3-pip
+      - py3-virtualenv
+      - postgresql-client
+      - build-base
+      - python3-dev
+      - libffi-dev
+      - openssl-dev
+      - musl-dev
+      - cargo
+      - rust
+    state: present
+
+- name: Create pgadmin user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: pgadmin
+    svc_home: "{{ pgadmin_data_dir }}"
+    svc_dirs:
+      - "{{ pgadmin_data_dir }}"
+      - "{{ pgadmin_log_dir }}"
+      - "{{ pgadmin_home }}"
+
+- name: Check pgAdmin virtualenv
+  ansible.builtin.stat:
+    path: "{{ pgadmin_home }}/venv/bin/pgadmin4"
+  register: _pgadmin_venv
+
+- name: Create pgAdmin virtualenv and install
+  when: not _pgadmin_venv.stat.exists
+  block:
+    - name: Create virtualenv
+      ansible.builtin.command:
+        cmd: python3 -m venv {{ pgadmin_home }}/venv
+        creates: "{{ pgadmin_home }}/venv/bin/python3"
+
+    - name: Upgrade pip
+      ansible.builtin.pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ pgadmin_home }}/venv"
+
+    - name: Install pgadmin4 and gunicorn
+      ansible.builtin.pip:
+        name:
+          - pgadmin4
+          - gunicorn
+        virtualenv: "{{ pgadmin_home }}/venv"
+
+- name: Detect Python version in pgAdmin venv
+  ansible.builtin.command:
+    cmd: "{{ pgadmin_home }}/venv/bin/python3 -c 'import sys; print(f\"{sys.version_info.major}.{sys.version_info.minor}\")'"
+  register: _python_version
+  changed_when: false
+
+- name: Deploy pgAdmin config
+  ansible.builtin.template:
+    src: pgadmin_config_local.py.j2
+    dest: "{{ pgadmin_home }}/config_local.py"
+    owner: pgadmin
+    group: pgadmin
+    mode: "0640"
+  notify: restart pgadmin4
+
+- name: Check pgAdmin DB exists
+  ansible.builtin.stat:
+    path: "{{ pgadmin_data_dir }}/pgadmin4.db"
+  register: _pgadmin_db
+
+- name: Initialize pgAdmin database
+  ansible.builtin.shell:
+    cmd: |
+      PGADMIN_SETUP_EMAIL="{{ pgadmin_email }}" \
+      PGADMIN_SETUP_PASSWORD="{{ vault_pgadmin_password }}" \
+      PYTHONPATH="{{ pgadmin_home }}" \
+      {{ pgadmin_home }}/venv/bin/python3 -c "
+      import pgadmin4.setup as setup
+      setup.setup_db()
+      "
+  when: not _pgadmin_db.stat.exists
+  changed_when: true
+
+- name: Deploy pgAdmin servers.json
+  ansible.builtin.template:
+    src: pgadmin_servers.json.j2
+    dest: /tmp/pgadmin_servers.json
+    mode: "0644"
+  when: not _pgadmin_db.stat.exists
+
+- name: Load servers into pgAdmin
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ pgadmin_home }}/venv/lib/python{{ _python_version.stdout }}/site-packages/pgadmin4 && \
+      PYTHONPATH="{{ pgadmin_home }}" {{ pgadmin_home }}/venv/bin/python3 setup.py \
+        --load-servers /tmp/pgadmin_servers.json --user "{{ pgadmin_email }}"
+  when: not _pgadmin_db.stat.exists
+  changed_when: true
+
+- name: Clean up servers.json
+  ansible.builtin.file:
+    path: /tmp/pgadmin_servers.json
+    state: absent
+
+- name: Set pgAdmin data ownership
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: pgadmin
+    group: pgadmin
+    recurse: true
+  loop:
+    - "{{ pgadmin_data_dir }}"
+    - "{{ pgadmin_log_dir }}"
+    - "{{ pgadmin_home }}"
+
+- name: Remove build dependencies
+  ansible.builtin.apk:
+    name:
+      - build-base
+      - python3-dev
+      - libffi-dev
+      - openssl-dev
+      - musl-dev
+      - cargo
+      - rust
+    state: absent
+
+- name: Deploy pgAdmin4 OpenRC service
+  ansible.builtin.template:
+    src: pgadmin4.openrc.j2
+    dest: /etc/init.d/pgadmin4
+    mode: "0755"
+  notify: restart pgadmin4
+
+- name: Enable pgAdmin4 at boot
+  ansible.builtin.service:
+    name: pgadmin4
+    enabled: true
+
+- name: Start pgAdmin4
+  ansible.builtin.service:
+    name: pgadmin4
+    state: started

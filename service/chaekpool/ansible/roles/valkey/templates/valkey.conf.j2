@@ -1,0 +1,47 @@
+################################## NETWORK ##################################
+
+bind {{ ip_valkey }} 127.0.0.1
+port {{ port_valkey }}
+protected-mode yes
+tcp-backlog 511
+timeout 0
+tcp-keepalive 300
+
+################################## SECURITY #################################
+
+requirepass {{ vault_valkey_password }}
+
+################################# GENERAL ###################################
+
+daemonize no
+pidfile /run/valkey/valkey.pid
+loglevel notice
+logfile {{ valkey_log_dir }}/valkey.log
+databases 16
+always-show-logo no
+
+################################ SNAPSHOTTING ################################
+
+save 900 1
+save 300 10
+save 60 10000
+stop-writes-on-bgsave-error yes
+rdbcompression yes
+rdbchecksum yes
+dbfilename dump.rdb
+dir {{ valkey_data_dir }}
+
+############################# MEMORY MANAGEMENT ##############################
+
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+
+############################## APPEND ONLY MODE ##############################
+
+appendonly yes
+appendfilename "appendonly.aof"
+appenddirname "appendonlydir"
+appendfsync everysec
+no-appendfsync-on-rewrite no
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb

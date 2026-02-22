@@ -1,0 +1,19 @@
+---
+# Authelia 사용자 데이터베이스
+
+users:
+  cpadmin:
+    disabled: false
+    displayname: "CP Admin"
+    email: "{{ vault_authelia_cpadmin_email }}"
+    groups:
+      - "admins"
+    password: "{{ _cpadmin_password_hash }}"
+
+  cpuser:
+    disabled: false
+    displayname: "CP User"
+    email: "{{ vault_authelia_cpuser_email }}"
+    groups:
+      - "users"
+    password: "{{ _cpuser_password_hash }}"

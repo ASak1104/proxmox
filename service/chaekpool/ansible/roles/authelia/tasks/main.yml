@@ -1,0 +1,139 @@
+---
+- name: Install dependencies
+  ansible.builtin.apk:
+    name:
+      - openssl
+    state: present
+    update_cache: true
+
+- name: Create authelia user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: authelia
+    svc_dirs:
+      - "{{ authelia_config_dir }}"
+      - "{{ authelia_data_dir }}"
+      - "{{ authelia_log_dir }}"
+      - "{{ authelia_opt_dir }}"
+
+- name: Install authelia binary
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: binary_download
+  vars:
+    bin_name: authelia
+    bin_version: "{{ authelia_version }}"
+    bin_url: "https://github.com/authelia/authelia/releases/download/v{{ authelia_version }}/authelia-v{{ authelia_version }}-linux-amd64-musl.tar.gz"
+    bin_src_path: authelia
+    bin_dest: "{{ authelia_bin }}"
+
+# --- OIDC JWKS RSA key ---
+- name: Generate OIDC JWKS RSA key
+  ansible.builtin.command:
+    cmd: openssl genrsa -out {{ authelia_config_dir }}/oidc.jwks.rsa.4096.pem 4096
+    creates: "{{ authelia_config_dir }}/oidc.jwks.rsa.4096.pem"
+
+- name: Set JWKS key permissions
+  ansible.builtin.file:
+    path: "{{ authelia_config_dir }}/oidc.jwks.rsa.4096.pem"
+    owner: authelia
+    group: authelia
+    mode: "0600"
+
+# --- Password hashes (argon2id for users) ---
+- name: Generate cpadmin password hash
+  ansible.builtin.command:
+    cmd: "{{ authelia_bin }} crypto hash generate argon2 --password '{{ vault_authelia_cpadmin_password }}'"
+  register: _cpadmin_hash_raw
+  changed_when: false
+  no_log: true
+
+- name: Set cpadmin hash fact
+  ansible.builtin.set_fact:
+    _cpadmin_password_hash: "{{ _cpadmin_hash_raw.stdout | regex_search('Digest: (.+)', '\\1') | first }}"
+  no_log: true
+
+- name: Generate cpuser password hash
+  ansible.builtin.command:
+    cmd: "{{ authelia_bin }} crypto hash generate argon2 --password '{{ vault_authelia_cpuser_password }}'"
+  register: _cpuser_hash_raw
+  changed_when: false
+  no_log: true
+
+- name: Set cpuser hash fact
+  ansible.builtin.set_fact:
+    _cpuser_password_hash: "{{ _cpuser_hash_raw.stdout | regex_search('Digest: (.+)', '\\1') | first }}"
+  no_log: true
+
+# --- OIDC client secret hashes (pbkdf2) ---
+- name: Generate Grafana OIDC client hash
+  ansible.builtin.command:
+    cmd: "{{ authelia_bin }} crypto hash generate pbkdf2 --password '{{ vault_authelia_oidc_grafana_secret }}'"
+  register: _grafana_hash_raw
+  changed_when: false
+  no_log: true
+
+- name: Set Grafana OIDC hash fact
+  ansible.builtin.set_fact:
+    _oidc_grafana_hash: "{{ _grafana_hash_raw.stdout | regex_search('Digest: (.+)', '\\1') | first }}"
+  no_log: true
+
+- name: Generate Jenkins OIDC client hash
+  ansible.builtin.command:
+    cmd: "{{ authelia_bin }} crypto hash generate pbkdf2 --password '{{ vault_authelia_oidc_jenkins_secret }}'"
+  register: _jenkins_hash_raw
+  changed_when: false
+  no_log: true
+
+- name: Set Jenkins OIDC hash fact
+  ansible.builtin.set_fact:
+    _oidc_jenkins_hash: "{{ _jenkins_hash_raw.stdout | regex_search('Digest: (.+)', '\\1') | first }}"
+  no_log: true
+
+- name: Generate pgAdmin OIDC client hash
+  ansible.builtin.command:
+    cmd: "{{ authelia_bin }} crypto hash generate pbkdf2 --password '{{ vault_authelia_oidc_pgadmin_secret }}'"
+  register: _pgadmin_hash_raw
+  changed_when: false
+  no_log: true
+
+- name: Set pgAdmin OIDC hash fact
+  ansible.builtin.set_fact:
+    _oidc_pgadmin_hash: "{{ _pgadmin_hash_raw.stdout | regex_search('Digest: (.+)', '\\1') | first }}"
+  no_log: true
+
+# --- Configuration ---
+- name: Deploy configuration.yml
+  ansible.builtin.template:
+    src: configuration.yml.j2
+    dest: "{{ authelia_config_dir }}/configuration.yml"
+    owner: authelia
+    group: authelia
+    mode: "0600"
+  notify: restart authelia
+
+- name: Deploy users_database.yml
+  ansible.builtin.template:
+    src: users_database.yml.j2
+    dest: "{{ authelia_config_dir }}/users_database.yml"
+    owner: authelia
+    group: authelia
+    mode: "0600"
+  notify: restart authelia
+
+- name: Deploy authelia wrapper script
+  ansible.builtin.copy:
+    src: authelia-wrapper.sh
+    dest: "{{ authelia_opt_dir }}/authelia-wrapper.sh"
+    mode: "0755"
+
+# --- Service ---
+- name: Deploy Authelia OpenRC service
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: openrc_service
+  vars:
+    openrc_name: authelia
+    openrc_src: authelia.openrc

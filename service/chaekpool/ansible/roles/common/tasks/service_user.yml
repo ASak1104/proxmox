@@ -1,0 +1,35 @@
+---
+# 시스템 서비스 유저/그룹 생성 + 디렉토리
+# 사용법:
+#   include_role:
+#     name: common
+#     tasks_from: service_user
+#   vars:
+#     svc_name: traefik
+#     svc_home: /var/empty        (선택, 기본값 /var/empty)
+#     svc_dirs:
+#       - /etc/traefik
+#       - /var/log/traefik
+
+- name: "Create {{ svc_name }} group"
+  ansible.builtin.group:
+    name: "{{ svc_name }}"
+    system: true
+
+- name: "Create {{ svc_name }} user"
+  ansible.builtin.user:
+    name: "{{ svc_name }}"
+    group: "{{ svc_name }}"
+    system: true
+    create_home: false
+    home: "{{ svc_home | default('/var/empty') }}"
+    shell: /sbin/nologin
+
+- name: "Create {{ svc_name }} directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ svc_name }}"
+    group: "{{ svc_name }}"
+    mode: "0755"
+  loop: "{{ svc_dirs }}"

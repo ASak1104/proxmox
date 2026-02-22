@@ -1,0 +1,6 @@
+---
+authelia_bin: /usr/local/bin/authelia
+authelia_config_dir: /etc/authelia
+authelia_data_dir: /var/lib/authelia
+authelia_log_dir: /var/log/authelia
+authelia_opt_dir: /opt/authelia

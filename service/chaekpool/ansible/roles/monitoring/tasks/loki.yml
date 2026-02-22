@@ -1,0 +1,43 @@
+---
+- name: Create loki user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: loki
+    svc_home: "{{ loki_data_dir }}"
+    svc_dirs:
+      - "{{ loki_bin_dir }}"
+      - "{{ loki_config_dir }}"
+      - "{{ loki_data_dir }}"
+      - "{{ loki_data_dir }}/chunks"
+      - "{{ loki_data_dir }}/rules"
+      - "{{ loki_data_dir }}/compactor"
+
+- name: Install loki binary
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: binary_download
+  vars:
+    bin_name: loki
+    bin_version: "{{ loki_version }}"
+    bin_url: "https://github.com/grafana/loki/releases/download/v{{ loki_version }}/loki-linux-amd64.zip"
+    bin_src_path: loki-linux-amd64
+    bin_dest: "{{ loki_bin_dir }}/loki"
+
+- name: Deploy loki.yml
+  ansible.builtin.copy:
+    src: loki.yml
+    dest: "{{ loki_config_dir }}/loki.yml"
+    owner: loki
+    group: loki
+    mode: "0644"
+  notify: restart loki
+
+- name: Deploy Loki OpenRC service
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: openrc_service
+  vars:
+    openrc_name: loki
+    openrc_src: loki.openrc

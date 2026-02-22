@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+
+description="CP Traefik Reverse Proxy"
+command="/usr/local/bin/traefik"
+command_args="--configFile=/etc/traefik/traefik.yml"
+command_user="traefik:traefik"
+
+supervisor="supervise-daemon"
+respawn_max=0
+respawn_delay=5
+respawn_period=60
+output_log="/var/log/traefik/traefik.log"
+error_log="/var/log/traefik/traefik.log"
+
+depend() {
+    need net
+}

@@ -1,0 +1,48 @@
+---
+# Network
+svc_gateway: "10.1.0.1"
+
+# Container IPs
+ip_traefik: "10.1.0.100"
+ip_authelia: "10.1.0.101"
+ip_postgresql: "10.1.0.110"
+ip_valkey: "10.1.0.111"
+ip_monitoring: "10.1.0.120"
+ip_jenkins: "10.1.0.130"
+ip_kopring: "10.1.0.140"
+
+# Service Ports
+port_traefik: 80
+port_authelia: 9091
+port_postgresql: 5432
+port_pgadmin: 5050
+port_valkey: 6379
+port_redis_commander: 8081
+port_prometheus: 9090
+port_grafana: 3000
+port_loki: 3100
+port_jaeger_ui: 16686
+port_jaeger_otlp_grpc: 4317
+port_jaeger_otlp_http: 4318
+port_jenkins: 8080
+port_kopring: 8080
+
+# Software Versions
+traefik_version: "3.6.7"
+authelia_version: "4.39.15"
+prometheus_version: "3.9.1"
+grafana_version: "12.3.2"
+loki_version: "3.6.5"
+jaeger_version: "2.15.0"
+jenkins_version: "2.541.1"
+jenkins_plugin_manager_version: "2.14.0"
+
+# Database
+pg_db: "{{ vault_pg_db }}"
+pg_user: "{{ vault_pg_user }}"
+
+# pgAdmin
+pgadmin_email: "{{ vault_pgadmin_email }}"
+
+# Domain
+base_domain: "cp.codingmon.dev"
