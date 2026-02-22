@@ -59,3 +59,23 @@ resource "proxmox_virtual_environment_container" "service" {
     ]
   }
 }
+
+# Ansible 부트스트랩: 컨테이너 생성 후 openssh + python3 설치
+resource "null_resource" "ansible_bootstrap" {
+  for_each = var.containers
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      sleep 5 && ssh ${var.proxmox_ssh_user}@${var.proxmox_ssh_host} "sudo pct exec ${each.value.id} -- sh -c '
+        apk add --no-cache openssh python3 ca-certificates &&
+        ssh-keygen -A &&
+        rc-service sshd start &&
+        rc-update add sshd
+      '"
+    EOT
+  }
+
+  triggers = {
+    container_id = proxmox_virtual_environment_container.service[each.key].vm_id
+  }
+}
