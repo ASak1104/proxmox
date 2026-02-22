@@ -204,7 +204,7 @@
     cmd: |
       cd {{ pgadmin_home }}/venv/lib/python{{ _python_version.stdout }}/site-packages/pgadmin4 && \
       PYTHONPATH="{{ pgadmin_home }}" {{ pgadmin_home }}/venv/bin/python3 setup.py \
-        --load-servers /tmp/pgadmin_servers.json --user "{{ pgadmin_email }}"
+        load-servers /tmp/pgadmin_servers.json --user "{{ pgadmin_email }}"
   when: not _pgadmin_db.stat.exists
   changed_when: true
 
