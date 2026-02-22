@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OpenTofu + Ansible 기반 Proxmox homelab infrastructure automation. Three layers:
 - **core/**: Foundation layer (OPNsense firewall VM with HAProxy for SSL termination and routing)
-- **service/chaekpool/**: Service layer (7 Alpine 3.23 LXC containers + Ansible 설정 관리)
-  - `terraform/` — 인프라 프로비저닝
+- **service/chaekpool/**: Service layer (6 LXC + 1 VM, Alpine 3.23 + Ansible 설정 관리)
+  - `terraform/` — 인프라 프로비저닝 (LXC 6개 + Jenkins VM 1개)
   - `ansible/` — 설정 관리 (6개 서비스 배포 — Kopring 제외)
 
 Documentation is in Korean. See `docs/README.md` for reading order.
@@ -21,7 +21,7 @@ For OPNsense HAProxy operations (troubleshooting, adding domains/certs, API auto
 # Infra layer: OPNsense VM (102)
 cd core/terraform && tofu init && tofu plan && tofu apply
 
-# Service layer: 7 LXC containers (200-240) + Ansible 부트스트랩
+# Service layer: 6 LXC + 1 VM (200-240) + Ansible 부트스트랩
 cd service/chaekpool/terraform && tofu init && tofu plan && tofu apply
 ```
 
@@ -115,7 +115,7 @@ Rule: VMID `2GN` → IP `10.1.0.(100 + G×10 + N)`, where G = group (0=LB, 1=Dat
 | 210 | PostgreSQL + pgAdmin | 10.1.0.110 | :5432, :5050 | pgadmin.cp.codingmon.dev |
 | 211 | Valkey + Redis Commander | 10.1.0.111 | :6379, :8081 | — |
 | 220 | Monitoring | 10.1.0.120 | :9090, :3000, :3100, :16686 | grafana.cp.codingmon.dev |
-| 230 | Jenkins | 10.1.0.130 | :8080 | jenkins.cp.codingmon.dev |
+| 230 | Jenkins (VM) | 10.1.0.130 | :8080 | jenkins.cp.codingmon.dev |
 | 240 | Kopring | 10.1.0.140 | :8080 | api.cp.codingmon.dev |
 
 ## Key Conventions
@@ -162,6 +162,7 @@ service/chaekpool/ansible/
 
 - bpg/proxmox provider with SSH agent auth (`ssh { agent = true }`)
 - Chaekpool containers use `for_each` over a `containers` map variable in `variables.tf`
+- Jenkins: Alpine nocloud VM (`proxmox_virtual_environment_vm`) — Docker/Testcontainers 지원
 - `null_resource` for Ansible bootstrap (openssh + python3 + sshd)
 - Local state (no remote backend)
 - Provider config is identical across both terraform directories
