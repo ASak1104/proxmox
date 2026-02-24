@@ -11,7 +11,8 @@ PostgreSQL 16 데이터베이스 서버와 pgAdmin 4 웹 관리 도구.
 ## 배포
 
 ```bash
-bash service/chaekpool/scripts/postgresql/deploy.sh
+cd service/chaekpool/ansible
+ansible-playbook site.yml -l cp-postgresql
 ```
 
 배포 단계:
@@ -50,7 +51,7 @@ host    all    all       10.1.0.0/24       scram-sha-256
 |------|-----|
 | 데이터베이스명 | `chaekpool` |
 | 사용자 | `chaekpool` |
-| 비밀번호 | `common.sh`의 `PG_PASSWORD` |
+| 비밀번호 | `vault.yml`의 `vault_pg_password` |
 | 인코딩 | UTF-8 |
 
 ### pgAdmin 4
@@ -65,8 +66,8 @@ host    all    all       10.1.0.0/24       scram-sha-256
 - 로그: `/var/log/pgadmin/pgadmin.log`
 
 **관리자 계정**:
-- 이메일: `admin@codingmon.dev` (`common.sh`의 `PGADMIN_EMAIL`)
-- 비밀번호: `common.sh`의 `PGADMIN_PASSWORD`
+- 이메일: `admin@codingmon.dev` (`vars.yml`의 `pgadmin_email`)
+- 비밀번호: `vault.yml`의 `vault_pgadmin_password`
 
 > pgAdmin 4는 Alpine에서 pip으로 설치한다. 설치 시 `build-base`, `python3-dev`, `cargo`, `rust` 등 빌드 의존성이 필요하며, 설치 완료 후 자동으로 제거된다.
 
@@ -74,13 +75,13 @@ host    all    all       10.1.0.0/24       scram-sha-256
 
 ```bash
 # PostgreSQL 상태
-pct_exec 210 "rc-service postgresql status"
+ssh root@10.1.0.110 "rc-service postgresql status"
 
 # DB 접속 테스트
-pct_exec 210 "su - postgres -s /bin/sh -c 'psql -c \"\\l\"'"
+ssh root@10.1.0.110 "su - postgres -s /bin/sh -c 'psql -c \"\\l\"'"
 
 # pgAdmin 상태
-pct_exec 210 "rc-service pgadmin4 status"
+ssh root@10.1.0.110 "rc-service pgadmin4 status"
 ```
 
 pgAdmin 웹 UI: `https://pgadmin.cp.codingmon.dev`
@@ -89,20 +90,20 @@ pgAdmin 웹 UI: `https://pgadmin.cp.codingmon.dev`
 
 ```bash
 # PostgreSQL
-pct_exec 210 "rc-service postgresql start"
-pct_exec 210 "rc-service postgresql stop"
-pct_exec 210 "rc-service postgresql restart"
+ssh root@10.1.0.110 "rc-service postgresql start"
+ssh root@10.1.0.110 "rc-service postgresql stop"
+ssh root@10.1.0.110 "rc-service postgresql restart"
 
 # pgAdmin
-pct_exec 210 "rc-service pgadmin4 start"
-pct_exec 210 "rc-service pgadmin4 stop"
-pct_exec 210 "rc-service pgadmin4 restart"
+ssh root@10.1.0.110 "rc-service pgadmin4 start"
+ssh root@10.1.0.110 "rc-service pgadmin4 stop"
+ssh root@10.1.0.110 "rc-service pgadmin4 restart"
 
 # PostgreSQL 로그
-pct_exec 210 "tail -f /var/lib/postgresql/16/data/log/*.log"
+ssh root@10.1.0.110 "tail -f /var/lib/postgresql/16/data/log/*.log"
 
 # pgAdmin 로그
-pct_exec 210 "tail -f /var/log/pgadmin/pgadmin.log"
+ssh root@10.1.0.110 "tail -f /var/log/pgadmin/pgadmin.log"
 ```
 
 ## 트러블슈팅
@@ -117,14 +118,14 @@ pct_exec 210 "tail -f /var/log/pgadmin/pgadmin.log"
 - `rc-service postgresql status`로 서비스 상태 확인
 
 **인증 실패**
-- `common.sh`의 `PG_PASSWORD`와 실제 DB 사용자 비밀번호 일치 확인
+- `vault.yml`의 `vault_pg_password`와 실제 DB 사용자 비밀번호 일치 확인
 - `pg_hba.conf`의 인증 방식 확인 (`scram-sha-256`)
 
 ## 참조 파일
 
 | 파일 | 설명 |
 |------|------|
-| `service/chaekpool/scripts/postgresql/deploy.sh` | 배포 스크립트 |
-| `service/chaekpool/scripts/postgresql/configs/pg_hba.conf` | 클라이언트 인증 설정 |
-| `service/chaekpool/scripts/postgresql/configs/postgresql.openrc` | PostgreSQL OpenRC 서비스 |
-| `service/chaekpool/scripts/postgresql/configs/pgadmin4.openrc` | pgAdmin OpenRC 서비스 |
+| `service/chaekpool/ansible/roles/postgresql/` | Ansible 역할 |
+| `service/chaekpool/ansible/roles/postgresql/templates/pg_hba.conf.j2` | 클라이언트 인증 설정 |
+| `service/chaekpool/ansible/roles/postgresql/templates/postgresql.openrc.j2` | PostgreSQL OpenRC 서비스 |
+| `service/chaekpool/ansible/roles/postgresql/templates/pgadmin4.openrc.j2` | pgAdmin OpenRC 서비스 |

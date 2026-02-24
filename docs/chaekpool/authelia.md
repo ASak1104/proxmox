@@ -68,7 +68,8 @@ access_control:
 ## 배포
 
 ```bash
-bash service/chaekpool/scripts/authelia/deploy.sh
+cd service/chaekpool/ansible
+ansible-playbook site.yml -l cp-authelia
 ```
 
 배포 단계 (5단계):
@@ -89,7 +90,7 @@ bash service/chaekpool/scripts/authelia/deploy.sh
 
 ### JWKS 키 보존
 
-OIDC 클라이언트는 Authelia의 JWKS 공개 키를 캐싱한다. 배포 시 키가 재생성되면 클라이언트의 캐싱된 키와 불일치하여 `bad_signature` 오류가 발생한다. deploy.sh는 키가 없을 때만 생성한다:
+OIDC 클라이언트는 Authelia의 JWKS 공개 키를 캐싱한다. 배포 시 키가 재생성되면 클라이언트의 캐싱된 키와 불일치하여 `bad_signature` 오류가 발생한다. Ansible 역할은 키가 없을 때만 생성한다:
 
 ```bash
 [ -f /etc/authelia/oidc.jwks.rsa.4096.pem ] || { openssl genrsa ... }
@@ -134,12 +135,12 @@ key: {{ secret "/etc/authelia/oidc.jwks.rsa.4096.pem" | mindent 10 "|" }}
 | `cpadmin` | admins | 관리자 (Grafana Admin 등) |
 | `cpuser` | users | 일반 사용자 (Grafana Viewer 등) |
 
-비밀번호는 `.chaekpool.env`의 `AUTHELIA_CPADMIN_PASSWORD`/`AUTHELIA_CPUSER_PASSWORD`에서 설정하며, deploy.sh가 argon2id 해시를 생성하여 주입한다.
+비밀번호는 `group_vars/all/vault.yml`에서 관리하며, Ansible 역할이 argon2id 해시를 생성하여 주입한다.
 
 사용자 추가 시:
 1. `users_database.yml`에 항목 추가 (해시 플레이스홀더 사용)
-2. `.chaekpool.env`에 비밀번호 변수 추가
-3. `deploy.sh`에 해시 생성 로직 추가
+2. `vault.yml`에 비밀번호 변수 추가
+3. Ansible 역할에 해시 생성 로직 추가
 4. 재배포
 
 ### OIDC 클라이언트 설정
@@ -196,7 +197,7 @@ pgAdmin 측 설정 (`config_local.py`):
 
 ```bash
 # 서비스 상태
-pct_exec 201 "rc-service authelia status"
+ssh root@10.1.0.101 "rc-service authelia status"
 
 # HTTP 응답 확인
 curl -s -o /dev/null -w "%{http_code}" http://10.1.0.101:9091/api/health
@@ -210,12 +211,12 @@ curl -s http://10.1.0.101:9091/.well-known/openid-configuration | python3 -m jso
 ## 운영
 
 ```bash
-pct_exec 201 "rc-service authelia start"
-pct_exec 201 "rc-service authelia stop"
-pct_exec 201 "rc-service authelia restart"
+ssh root@10.1.0.101 "rc-service authelia start"
+ssh root@10.1.0.101 "rc-service authelia stop"
+ssh root@10.1.0.101 "rc-service authelia restart"
 
 # 로그 확인
-pct_exec 201 "tail -f /var/log/authelia/authelia.log"
+ssh root@10.1.0.101 "tail -f /var/log/authelia/authelia.log"
 
 # 디버그 모드 (임시)
 # configuration.yml의 log.level을 "debug"로 변경 후 재시작
@@ -250,12 +251,12 @@ entryPoints:
 **원인**: Authelia 재배포 시 JWKS RSA 키가 재생성되어 클라이언트가 캐싱한 공개 키와 불일치.
 
 **해결**:
-1. deploy.sh의 키 생성 로직이 `[ -f ... ] || { ... }` 가드를 사용하는지 확인
+1. Ansible 역할의 키 생성 로직이 기존 키가 있을 때 재생성하지 않는지 확인
 2. 이미 키가 재생성된 경우, OIDC 클라이언트 서비스를 모두 재시작:
 ```bash
-pct_exec 220 "rc-service grafana restart"
-pct_exec 230 "rc-service jenkins restart"
-pct_exec 210 "rc-service pgadmin4 restart"
+ssh root@10.1.0.120 "rc-service grafana restart"
+ssh root@10.1.0.130 "rc-service jenkins restart"
+ssh root@10.1.0.110 "rc-service pgadmin4 restart"
 ```
 
 ### OIDC invalid_scope 오류
@@ -329,10 +330,10 @@ java -jar /tmp/jenkins-plugin-manager.jar \
 
 | 파일 | 설명 |
 |------|------|
-| `service/chaekpool/scripts/authelia/deploy.sh` | 배포 스크립트 |
-| `service/chaekpool/scripts/authelia/configs/configuration.yml` | Authelia 메인 설정 |
-| `service/chaekpool/scripts/authelia/configs/users_database.yml` | 사용자 데이터베이스 |
-| `service/chaekpool/scripts/authelia/configs/authelia-wrapper.sh` | Wrapper 스크립트 |
-| `service/chaekpool/scripts/authelia/configs/authelia.openrc` | OpenRC 서비스 파일 |
-| `service/chaekpool/.chaekpool.env.template` | 시크릿 템플릿 (필수 변수 목록) |
-| `service/chaekpool/scripts/traefik/configs/services.yml` | ForwardAuth 미들웨어 + 라우팅 |
+| `service/chaekpool/ansible/roles/authelia/` | Ansible 역할 |
+| `service/chaekpool/ansible/roles/authelia/templates/configuration.yml.j2` | Authelia 메인 설정 |
+| `service/chaekpool/ansible/roles/authelia/templates/users_database.yml.j2` | 사용자 데이터베이스 |
+| `service/chaekpool/ansible/roles/authelia/templates/authelia-wrapper.sh.j2` | Wrapper 스크립트 |
+| `service/chaekpool/ansible/roles/authelia/templates/authelia.openrc.j2` | OpenRC 서비스 파일 |
+| `service/chaekpool/ansible/group_vars/all/vault.yml` | 시크릿 (ansible-vault 암호화) |
+| `service/chaekpool/ansible/roles/traefik/templates/services.yml.j2` | ForwardAuth 미들웨어 + 라우팅 |

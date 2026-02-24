@@ -11,7 +11,8 @@ Valkey 인메모리 데이터 스토어와 Redis Commander 웹 관리 도구.
 ## 배포
 
 ```bash
-bash service/chaekpool/scripts/valkey/deploy.sh
+cd service/chaekpool/ansible
+ansible-playbook site.yml -l cp-valkey
 ```
 
 배포 단계:
@@ -54,7 +55,7 @@ appendfsync everysec
 ```
 
 - `bind`: 서비스 네트워크 IP와 localhost에만 바인딩
-- `requirepass`: `common.sh`의 `VALKEY_PASSWORD`와 동기화 필요
+- `requirepass`: `vault.yml`의 `vault_valkey_password`와 동기화 필요
 - `maxmemory`: 256MB 제한, LRU 정책으로 오래된 키 자동 삭제
 - AOF + 스냅샷 이중 영속화
 
@@ -67,13 +68,13 @@ appendfsync everysec
 
 ```bash
 # Valkey 상태
-pct_exec 211 "rc-service valkey status"
+ssh root@10.1.0.111 "rc-service valkey status"
 
 # Valkey 접속 테스트
-pct_exec 211 "valkey-cli -a <비밀번호> ping"
+ssh root@10.1.0.111 "valkey-cli -a <비밀번호> ping"
 
 # Redis Commander 상태
-pct_exec 211 "rc-service redis-commander status"
+ssh root@10.1.0.111 "rc-service redis-commander status"
 ```
 
 Redis Commander 웹 UI: `http://10.1.0.111:8081` (VPN 직접 접근)
@@ -82,28 +83,28 @@ Redis Commander 웹 UI: `http://10.1.0.111:8081` (VPN 직접 접근)
 
 ```bash
 # Valkey
-pct_exec 211 "rc-service valkey start"
-pct_exec 211 "rc-service valkey stop"
-pct_exec 211 "rc-service valkey restart"
+ssh root@10.1.0.111 "rc-service valkey start"
+ssh root@10.1.0.111 "rc-service valkey stop"
+ssh root@10.1.0.111 "rc-service valkey restart"
 
 # Redis Commander
-pct_exec 211 "rc-service redis-commander start"
-pct_exec 211 "rc-service redis-commander stop"
-pct_exec 211 "rc-service redis-commander restart"
+ssh root@10.1.0.111 "rc-service redis-commander start"
+ssh root@10.1.0.111 "rc-service redis-commander stop"
+ssh root@10.1.0.111 "rc-service redis-commander restart"
 
 # Valkey 로그
-pct_exec 211 "tail -f /var/log/valkey/valkey.log"
+ssh root@10.1.0.111 "tail -f /var/log/valkey/valkey.log"
 
 # Valkey CLI 모니터링
-pct_exec 211 "valkey-cli -a <비밀번호> monitor"
-pct_exec 211 "valkey-cli -a <비밀번호> info memory"
+ssh root@10.1.0.111 "valkey-cli -a <비밀번호> monitor"
+ssh root@10.1.0.111 "valkey-cli -a <비밀번호> info memory"
 ```
 
 ## 트러블슈팅
 
 **Redis Commander 실행 안 됨**
-- Node.js 설치 확인: `pct_exec 211 "node --version"`
-- npm 글로벌 패키지 확인: `pct_exec 211 "npm list -g redis-commander"`
+- Node.js 설치 확인: `ssh root@10.1.0.111 "node --version"`
+- npm 글로벌 패키지 확인: `ssh root@10.1.0.111 "npm list -g redis-commander"`
 - 로그 확인: `/var/log/redis-commander.log`
 
 **Valkey 접속 실패**
@@ -119,7 +120,7 @@ pct_exec 211 "valkey-cli -a <비밀번호> info memory"
 
 | 파일 | 설명 |
 |------|------|
-| `service/chaekpool/scripts/valkey/deploy.sh` | 배포 스크립트 |
-| `service/chaekpool/scripts/valkey/configs/valkey.conf` | Valkey 설정 |
-| `service/chaekpool/scripts/valkey/configs/valkey.openrc` | Valkey OpenRC 서비스 |
-| `service/chaekpool/scripts/valkey/configs/redis-commander.openrc` | Redis Commander OpenRC 서비스 |
+| `service/chaekpool/ansible/roles/valkey/` | Ansible 역할 |
+| `service/chaekpool/ansible/roles/valkey/templates/valkey.conf.j2` | Valkey 설정 |
+| `service/chaekpool/ansible/roles/valkey/templates/valkey.openrc.j2` | Valkey OpenRC 서비스 |
+| `service/chaekpool/ansible/roles/valkey/templates/redis-commander.openrc.j2` | Redis Commander OpenRC 서비스 |

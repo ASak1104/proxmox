@@ -13,27 +13,22 @@ Kotlin + Spring Boot 애플리케이션. Git 저장소에서 소스를 클론하
 
 ### GIT_REPO 변경 (필수)
 
-`service/chaekpool/scripts/kopring/deploy.sh`의 `GIT_REPO` 변수를 실제 저장소 URL로 변경해야 한다:
-
-```bash
-# deploy.sh 9번째 줄
-GIT_REPO="https://github.com/your-org/your-kopring-app.git"  # ← 실제 URL로 변경
-GIT_BRANCH="main"
-```
+`group_vars/all/vars.yml`의 `kopring_git_repo` 변수를 실제 저장소 URL로 변경해야 한다.
 
 ### 의존 서비스 확인
 
 Kopring은 PostgreSQL과 Valkey에 연결하므로 두 서비스가 먼저 실행 중이어야 한다:
 
 ```bash
-pct_exec 210 "rc-service postgresql status"
-pct_exec 211 "rc-service valkey status"
+ssh root@10.1.0.110 "rc-service postgresql status"
+ssh root@10.1.0.111 "rc-service valkey status"
 ```
 
 ## 배포
 
 ```bash
-bash service/chaekpool/scripts/kopring/deploy.sh
+cd service/chaekpool/ansible
+ansible-playbook site.yml -l cp-kopring
 ```
 
 배포 단계:
@@ -75,7 +70,7 @@ spring:
 
 - PostgreSQL: `10.1.0.110:5432` (CT 210)
 - Valkey: `10.1.0.111:6379` (CT 211)
-- 비밀번호는 `common.sh`의 값과 동기화 필요
+- 비밀번호는 `vault.yml`의 값과 동기화 필요
 
 ### 디렉토리 구조
 
@@ -89,7 +84,7 @@ spring:
 
 ```bash
 # 서비스 상태
-pct_exec 240 "rc-service kopring status"
+ssh root@10.1.0.140 "rc-service kopring status"
 
 # 헬스체크
 curl -s http://10.1.0.140:8080/actuator/health
@@ -103,17 +98,18 @@ curl -s http://10.1.0.140:8080/actuator/prometheus | head -20
 ## 운영
 
 ```bash
-pct_exec 240 "rc-service kopring start"
-pct_exec 240 "rc-service kopring stop"
-pct_exec 240 "rc-service kopring restart"
+ssh root@10.1.0.140 "rc-service kopring start"
+ssh root@10.1.0.140 "rc-service kopring stop"
+ssh root@10.1.0.140 "rc-service kopring restart"
 ```
 
 ### 재빌드 및 재배포
 
-소스 코드가 변경된 경우 deploy.sh를 다시 실행하면 `git pull` → `gradlew bootJar` → JAR 교체 → 서비스 재시작이 수행된다.
+소스 코드가 변경된 경우 Ansible 배포를 다시 실행하면 `git pull` → `gradlew bootJar` → JAR 교체 → 서비스 재시작이 수행된다.
 
 ```bash
-bash service/chaekpool/scripts/kopring/deploy.sh
+cd service/chaekpool/ansible
+ansible-playbook site.yml -l cp-kopring
 ```
 
 ## 트러블슈팅
@@ -150,6 +146,6 @@ ERROR: No JAR found
 
 | 파일 | 설명 |
 |------|------|
-| `service/chaekpool/scripts/kopring/deploy.sh` | 배포 스크립트 |
-| `service/chaekpool/scripts/kopring/configs/application.yml` | Spring Boot 설정 |
-| `service/chaekpool/scripts/kopring/configs/kopring.openrc` | OpenRC 서비스 파일 |
+| `service/chaekpool/ansible/roles/kopring/` | Ansible 역할 |
+| `service/chaekpool/ansible/roles/kopring/templates/application.yml.j2` | Spring Boot 설정 |
+| `service/chaekpool/ansible/roles/kopring/templates/kopring.openrc.j2` | OpenRC 서비스 파일 |

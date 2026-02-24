@@ -17,7 +17,8 @@
 ## 배포
 
 ```bash
-bash service/chaekpool/scripts/monitoring/deploy.sh
+cd service/chaekpool/ansible
+ansible-playbook site.yml -l cp-monitoring
 ```
 
 배포 단계 (8단계):
@@ -154,10 +155,10 @@ extensions:
 
 ```bash
 # 전체 서비스 상태
-pct_exec 220 "rc-service prometheus status"
-pct_exec 220 "rc-service grafana status"
-pct_exec 220 "rc-service loki status"
-pct_exec 220 "rc-service jaeger status"
+ssh root@10.1.0.120 "rc-service prometheus status"
+ssh root@10.1.0.120 "rc-service grafana status"
+ssh root@10.1.0.120 "rc-service loki status"
+ssh root@10.1.0.120 "rc-service jaeger status"
 
 # Prometheus 타겟 확인
 curl -s http://10.1.0.120:9090/api/v1/targets | jq '.data.activeTargets[].health'
@@ -175,32 +176,32 @@ curl -s http://10.1.0.120:3100/ready
 
 ```bash
 # Prometheus
-pct_exec 220 "rc-service prometheus start|stop|restart"
+ssh root@10.1.0.120 "rc-service prometheus start|stop|restart"
 
 # Grafana
-pct_exec 220 "rc-service grafana start|stop|restart"
+ssh root@10.1.0.120 "rc-service grafana start|stop|restart"
 
 # Loki
-pct_exec 220 "rc-service loki start|stop|restart"
+ssh root@10.1.0.120 "rc-service loki start|stop|restart"
 
 # Jaeger
-pct_exec 220 "rc-service jaeger start|stop|restart"
+ssh root@10.1.0.120 "rc-service jaeger start|stop|restart"
 ```
 
 ### 로그 확인
 
 ```bash
 # Prometheus
-pct_exec 220 "tail -f /var/log/prometheus.log"
+ssh root@10.1.0.120 "tail -f /var/log/prometheus.log"
 
 # Grafana
-pct_exec 220 "tail -f /var/log/grafana/grafana.log"
+ssh root@10.1.0.120 "tail -f /var/log/grafana/grafana.log"
 
 # Loki
-pct_exec 220 "tail -f /var/log/loki.log"
+ssh root@10.1.0.120 "tail -f /var/log/loki.log"
 
 # Jaeger
-pct_exec 220 "tail -f /var/log/jaeger.log"
+ssh root@10.1.0.120 "tail -f /var/log/jaeger.log"
 ```
 
 ## 트러블슈팅
@@ -237,10 +238,9 @@ pct_exec 220 "tail -f /var/log/jaeger.log"
 
 | 파일 | 설명 |
 |------|------|
-| `service/chaekpool/scripts/monitoring/deploy.sh` | 배포 스크립트 |
-| `service/chaekpool/scripts/monitoring/configs/prometheus.yml` | Prometheus 설정 |
-| `service/chaekpool/scripts/monitoring/configs/grafana.ini` | Grafana 설정 |
-| `service/chaekpool/scripts/monitoring/configs/datasources.yml` | Grafana 데이터소스 |
-| `service/chaekpool/scripts/monitoring/configs/loki.yml` | Loki 설정 |
-| `service/chaekpool/scripts/monitoring/configs/jaeger.yml` | Jaeger 설정 |
-| `service/chaekpool/scripts/monitoring/configs/*.openrc` | OpenRC 서비스 파일 |
+| `service/chaekpool/ansible/roles/monitoring/` | Ansible 역할 |
+| `service/chaekpool/ansible/roles/monitoring/templates/prometheus.yml.j2` | Prometheus 설정 |
+| `service/chaekpool/ansible/roles/monitoring/templates/grafana.ini.j2` | Grafana 설정 |
+| `service/chaekpool/ansible/roles/monitoring/templates/datasources.yml.j2` | Grafana 데이터소스 |
+| `service/chaekpool/ansible/roles/monitoring/templates/loki.yml.j2` | Loki 설정 |
+| `service/chaekpool/ansible/roles/monitoring/templates/jaeger.yml.j2` | Jaeger 설정 |

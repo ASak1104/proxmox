@@ -11,7 +11,8 @@ Chaekpool 서비스 계층의 HTTP 리버스 프록시. SSL 처리는 OPNsense H
 ## 배포
 
 ```bash
-bash service/chaekpool/scripts/traefik/deploy.sh
+cd service/chaekpool/ansible
+ansible-playbook site.yml -l cp-traefik
 ```
 
 배포 단계:
@@ -58,7 +59,7 @@ api:
 
 ### 새 서비스 추가
 
-`service/chaekpool/scripts/traefik/configs/services.yml`에 라우터와 서비스를 추가한다:
+`service/chaekpool/ansible/roles/traefik/templates/services.yml.j2`에 라우터와 서비스를 추가한다:
 
 ```yaml
 http:
@@ -84,7 +85,7 @@ OPNsense HAProxy(VM 102)의 와일드카드 라우팅(`*.cp.codingmon.dev`)이 �
 
 ```bash
 # 서비스 상태 확인
-pct_exec 200 "rc-service traefik status"
+ssh root@10.1.0.100 "rc-service traefik status"
 
 # HTTP 응답 확인 (서비스 네트워크 내에서)
 curl -H "Host: api.cp.codingmon.dev" http://10.1.0.100/
@@ -93,13 +94,13 @@ curl -H "Host: api.cp.codingmon.dev" http://10.1.0.100/
 ## 운영
 
 ```bash
-pct_exec 200 "rc-service traefik start"
-pct_exec 200 "rc-service traefik stop"
-pct_exec 200 "rc-service traefik restart"
+ssh root@10.1.0.100 "rc-service traefik start"
+ssh root@10.1.0.100 "rc-service traefik stop"
+ssh root@10.1.0.100 "rc-service traefik restart"
 
 # 로그 확인
-pct_exec 200 "tail -f /var/log/traefik/traefik.log"
-pct_exec 200 "tail -f /var/log/traefik/access.log"
+ssh root@10.1.0.100 "tail -f /var/log/traefik/traefik.log"
+ssh root@10.1.0.100 "tail -f /var/log/traefik/access.log"
 ```
 
 ## 트러블슈팅
@@ -116,7 +117,7 @@ pct_exec 200 "tail -f /var/log/traefik/access.log"
 
 | 파일 | 설명 |
 |------|------|
-| `service/chaekpool/scripts/traefik/deploy.sh` | 배포 스크립트 |
-| `service/chaekpool/scripts/traefik/configs/traefik.yml` | 정적 설정 |
-| `service/chaekpool/scripts/traefik/configs/services.yml` | 동적 라우팅 규칙 |
-| `service/chaekpool/scripts/traefik/configs/traefik.openrc` | OpenRC 서비스 파일 |
+| `service/chaekpool/ansible/roles/traefik/` | Ansible 역할 |
+| `service/chaekpool/ansible/roles/traefik/templates/traefik.yml.j2` | 정적 설정 |
+| `service/chaekpool/ansible/roles/traefik/templates/services.yml.j2` | 동적 라우팅 규칙 |
+| `service/chaekpool/ansible/roles/traefik/templates/traefik.openrc.j2` | OpenRC 서비스 파일 |

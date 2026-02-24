@@ -12,7 +12,8 @@ Jenkins CI/CD 서버. WAR 파일로 배포되며 OpenJDK 17에서 실행된다.
 ## 배포
 
 ```bash
-bash service/chaekpool/scripts/jenkins/deploy.sh
+cd service/chaekpool/ansible
+ansible-playbook site.yml -l cp-jenkins
 ```
 
 배포 단계 (6단계):
@@ -74,7 +75,7 @@ jenkins:
   securityRealm:
     oic:
       clientId: "jenkins"
-      clientSecret: "..."    # deploy.sh에서 주입
+      clientSecret: "..."    # Ansible vault에서 주입
       serverConfiguration:
         wellKnown:
           wellKnownOpenIDConfigurationUrl: "https://authelia.cp.codingmon.dev/.well-known/openid-configuration"
@@ -100,7 +101,7 @@ OIDC 상세 설정 및 트러블슈팅: [authelia.md](authelia.md) 참조
 
 ```bash
 # 서비스 상태
-pct_exec 230 "rc-service jenkins status"
+ssh root@10.1.0.130 "rc-service jenkins status"
 
 # HTTP 응답 확인
 curl -s -o /dev/null -w "%{http_code}" http://10.1.0.130:8080/
@@ -111,12 +112,12 @@ curl -s -o /dev/null -w "%{http_code}" http://10.1.0.130:8080/
 ## 운영
 
 ```bash
-pct_exec 230 "rc-service jenkins start"
-pct_exec 230 "rc-service jenkins stop"
-pct_exec 230 "rc-service jenkins restart"
+ssh root@10.1.0.130 "rc-service jenkins start"
+ssh root@10.1.0.130 "rc-service jenkins stop"
+ssh root@10.1.0.130 "rc-service jenkins restart"
 
 # 로그 확인
-pct_exec 230 "tail -f /var/log/jenkins/jenkins.log"
+ssh root@10.1.0.130 "tail -f /var/log/jenkins/jenkins.log"
 ```
 
 ## 트러블슈팅
@@ -129,25 +130,25 @@ pct_exec 230 "tail -f /var/log/jenkins/jenkins.log"
 **"Jenkins.instance is missing" 오류**
 - 원인: `JENKINS_HOME` 환경 변수 미설정
 - 해결: wrapper 스크립트가 올바르게 배포되었는지 확인
-- 확인: `pct_exec 230 "cat /opt/jenkins/jenkins-wrapper.sh | grep JENKINS_HOME"`
+- 확인: `ssh root@10.1.0.130 "cat /opt/jenkins/jenkins-wrapper.sh | grep JENKINS_HOME"`
 
 **"no fontmanager in system library path" 오류**
 - 원인: `openjdk17-jre-headless` 사용 (GUI 라이브러리 없음)
 - 해결: `openjdk17` 전체 패키지 설치 필요
-- 확인: `pct_exec 230 "apk list --installed | grep openjdk17"`
+- 확인: `ssh root@10.1.0.130 "apk list --installed | grep openjdk17"`
 
 **포트 충돌**
 - Kopring(CT 240)도 8080 포트를 사용하지만 서로 다른 컨테이너이므로 충돌 없음
 
 **플러그인 설치 실패**
-- 인터넷 연결 확인: `pct_exec 230 "wget -q -O /dev/null https://updates.jenkins.io/"`
-- DNS 해석 확인: `pct_exec 230 "nslookup updates.jenkins.io"`
+- 인터넷 연결 확인: `ssh root@10.1.0.130 "wget -q -O /dev/null https://updates.jenkins.io/"`
+- DNS 해석 확인: `ssh root@10.1.0.130 "nslookup updates.jenkins.io"`
 
 ## 참조 파일
 
 | 파일 | 설명 |
 |------|------|
-| `service/chaekpool/scripts/jenkins/deploy.sh` | 배포 스크립트 |
-| `service/chaekpool/scripts/jenkins/configs/casc.yaml` | JCasC OIDC 설정 |
-| `service/chaekpool/scripts/jenkins/configs/jenkins.openrc` | OpenRC 서비스 파일 |
-| `service/chaekpool/scripts/jenkins/configs/jenkins-wrapper.sh` | 환경 변수 설정 wrapper |
+| `service/chaekpool/ansible/roles/jenkins/` | Ansible 역할 |
+| `service/chaekpool/ansible/roles/jenkins/templates/casc.yaml.j2` | JCasC OIDC 설정 |
+| `service/chaekpool/ansible/roles/jenkins/templates/jenkins.openrc.j2` | OpenRC 서비스 파일 |
+| `service/chaekpool/ansible/roles/jenkins/templates/jenkins-wrapper.sh.j2` | 환경 변수 설정 wrapper |
