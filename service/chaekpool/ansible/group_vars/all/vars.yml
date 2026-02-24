@@ -34,7 +34,7 @@ prometheus_version: "3.9.1"
 grafana_version: "12.3.2"
 loki_version: "3.6.5"
 jaeger_version: "2.15.0"
-jenkins_version: "2.541.1"
+jenkins_version: "2.541.2"
 jenkins_plugin_manager_version: "2.14.0"
 
 # Database
