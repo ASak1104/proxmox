@@ -71,6 +71,56 @@ host    all    all       10.1.0.0/24       scram-sha-256
 
 > pgAdmin 4는 Alpine에서 pip으로 설치한다. 설치 시 `build-base`, `python3-dev`, `cargo`, `rust` 등 빌드 의존성이 필요하며, 설치 완료 후 자동으로 제거된다.
 
+**OIDC 인증 (Authelia)**:
+
+pgAdmin은 Authelia OIDC를 통한 SSO 로그인을 지원한다.
+
+```python
+AUTHENTICATION_SOURCES = ['oauth2', 'internal']  # OAuth2 우선, 내부 인증 폴백
+OAUTH2_AUTO_CREATE_USER = True                    # 첫 OIDC 로그인 시 사용자 자동 생성
+MASTER_PASSWORD_REQUIRED = False                  # 서비스 네트워크 trust 인증이므로 불필요
+OAUTH2_CONFIG = [{
+    'OAUTH2_NAME': 'authelia',
+    'OAUTH2_DISPLAY_NAME': 'Authelia SSO',
+    'OAUTH2_CLIENT_ID': 'pgadmin',
+    'OAUTH2_CLIENT_SECRET': '<vault_authelia_oidc_pgadmin_secret>',
+    'OAUTH2_TOKEN_URL': 'https://authelia.cp.codingmon.dev/api/oidc/token',
+    'OAUTH2_AUTHORIZATION_URL': 'https://authelia.cp.codingmon.dev/api/oidc/authorization',
+    'OAUTH2_USERINFO_ENDPOINT': 'https://authelia.cp.codingmon.dev/api/oidc/userinfo',
+    'OAUTH2_SERVER_METADATA_URL': 'https://authelia.cp.codingmon.dev/.well-known/openid-configuration',
+    'OAUTH2_SCOPE': 'openid email profile',
+}]
+```
+
+- `AUTHENTICATION_SOURCES`에서 `oauth2`가 `internal`보다 앞에 있으므로 로그인 화면에서 OIDC가 기본 옵션으로 표시된다
+- OIDC 클라이언트 시크릿은 `vault.yml`의 `vault_authelia_oidc_pgadmin_secret` (평문, Authelia 측은 PBKDF2 해시)
+- 소스: `roles/postgresql/templates/pgadmin_config_local.py.j2`
+
+**PostgreSQL 서버 자동 등록**:
+
+pgAdmin 배포 시 `servers.json`으로 CP PostgreSQL 서버가 자동 등록된다.
+
+```json
+{
+  "Servers": {
+    "1": {
+      "Name": "CP PostgreSQL",
+      "Group": "Servers",
+      "Host": "10.1.0.110",
+      "Port": 5432,
+      "MaintenanceDB": "chaekpool",
+      "Username": "chaekpool",
+      "SSLMode": "prefer",
+      "Shared": true
+    }
+  }
+}
+```
+
+- `Shared: true`로 설정되어 모든 pgAdmin 사용자가 별도 등록 없이 서버에 접근 가능
+- Ansible이 `pgadmin setup load-servers` CLI로 pgAdmin DB에 주입
+- 소스: `roles/postgresql/templates/pgadmin_servers.json.j2`
+
 ## 검증
 
 ```bash
@@ -129,3 +179,5 @@ ssh root@10.1.0.110 "tail -f /var/log/pgadmin/pgadmin.log"
 | `service/chaekpool/ansible/roles/postgresql/templates/pg_hba.conf.j2` | 클라이언트 인증 설정 |
 | `service/chaekpool/ansible/roles/postgresql/templates/postgresql.openrc.j2` | PostgreSQL OpenRC 서비스 |
 | `service/chaekpool/ansible/roles/postgresql/templates/pgadmin4.openrc.j2` | pgAdmin OpenRC 서비스 |
+| `service/chaekpool/ansible/roles/postgresql/templates/pgadmin_config_local.py.j2` | pgAdmin 설정 (OIDC 포함) |
+| `service/chaekpool/ansible/roles/postgresql/templates/pgadmin_servers.json.j2` | pgAdmin 서버 자동 등록 |
