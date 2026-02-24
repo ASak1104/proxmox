@@ -1,4 +1,5 @@
 jenkins:
+  numExecutors: 0
   securityRealm:
     oic:
       clientId: "jenkins"
@@ -10,8 +11,14 @@ jenkins:
       fullNameFieldName: "name"
       emailFieldName: "email"
       groupsFieldName: "groups"
+      groupIdStrategy: "caseSensitive"
+      userIdStrategy: "caseSensitive"
       logoutFromOpenidProvider: true
       postLogoutRedirectUrl: "https://jenkins.{{ base_domain }}/"
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: "https://jenkins.{{ base_domain }}/"
