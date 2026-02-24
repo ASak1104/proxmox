@@ -1,6 +1,6 @@
 # Chaekpool 서비스 배포
 
-Chaekpool 프로젝트의 서비스 계층. 7개의 Alpine 3.23 LXC 컨테이너로 구성되며, 모두 서비스 네트워크(vmbr2, `10.1.0.0/24`)에 위치한다.
+Chaekpool 프로젝트의 서비스 계층. 6개의 Alpine 3.23 LXC 컨테이너 + 1 VM(Jenkins)으로 구성되며, 모두 서비스 네트워크(vmbr2, `10.1.0.0/24`)에 위치한다.
 
 > **전제 조건**: [인프라 배포](../infra-deployment.md)가 완료되어 있어야 한다.
 
@@ -29,24 +29,31 @@ tofu apply
 
 ## 배포 방법
 
-### 전체 배포
+### VPN 연결
 
 ```bash
-bash service/chaekpool/scripts/deploy-all.sh
+bash scripts/vpn.sh up
 ```
 
-7개 서비스를 순서대로 배포한다.
-
-### 개별 배포
+### Ansible 배포
 
 ```bash
-bash service/chaekpool/scripts/traefik/deploy.sh
-bash service/chaekpool/scripts/authelia/deploy.sh
-bash service/chaekpool/scripts/postgresql/deploy.sh
-bash service/chaekpool/scripts/valkey/deploy.sh
-bash service/chaekpool/scripts/monitoring/deploy.sh
-bash service/chaekpool/scripts/jenkins/deploy.sh
-bash service/chaekpool/scripts/kopring/deploy.sh
+cd service/chaekpool/ansible
+ansible-galaxy collection install -r requirements.yml
+
+# 전체 배포
+ansible-playbook site.yml
+
+# 개별 배포
+ansible-playbook site.yml -l cp-traefik
+ansible-playbook site.yml -l cp-authelia
+ansible-playbook site.yml -l cp-postgresql
+ansible-playbook site.yml -l cp-valkey
+ansible-playbook site.yml -l cp-monitoring
+ansible-playbook site.yml -l cp-jenkins
+
+# 드라이런
+ansible-playbook site.yml --check --diff
 ```
 
 ## 배포 순서 의존관계
@@ -67,46 +74,23 @@ bash service/chaekpool/scripts/kopring/deploy.sh
 - **Monitoring**과 **Jenkins**는 독립적으로 언제든 배포 가능
 - **Kopring**은 PostgreSQL과 Valkey가 실행 중이어야 정상 기동
 
-## 공통 헬퍼 함수
+## 서비스 관리 (OpenRC)
 
-`service/chaekpool/scripts/common.sh`에 정의된 3개의 핵심 함수:
-
-### `pct_exec <CT_ID> <COMMAND>`
-
-단일 명령을 컨테이너 내에서 실행한다.
+VPN 연결 후 직접 SSH로 서비스 관리:
 
 ```bash
-# 예시: CT 210에서 PostgreSQL 상태 확인
-pct_exec 210 "rc-service postgresql status"
+# 서비스 상태 확인
+ssh root@<IP> "rc-service <서비스명> status"
+
+# 서비스 시작/중지/재시작
+ssh root@<IP> "rc-service <서비스명> start|stop|restart"
+
+# 부팅 시 자동 시작 등록/해제
+ssh root@<IP> "rc-update add|del <서비스명>"
+
+# 등록된 서비스 목록
+ssh root@<IP> "rc-update show"
 ```
-
-동작: `ssh <PROXMOX_USER>@<PROXMOX_HOST> "sudo pct exec <CT_ID> -- sh -c '<COMMAND>'"`
-
-### `pct_push <CT_ID> <LOCAL_PATH> <REMOTE_PATH>`
-
-로컬 파일을 컨테이너로 전송한다. 2단계로 진행된다:
-1. 로컬 → Proxmox 호스트 `/tmp/`
-2. Proxmox `/tmp/` → 컨테이너 대상 경로
-
-```bash
-# 예시: 설정 파일 전송
-pct_push 210 "./configs/pg_hba.conf" "/var/lib/postgresql/16/data/pg_hba.conf"
-```
-
-### `pct_script <CT_ID>`
-
-heredoc으로 전달받은 다중 행 스크립트를 컨테이너 내에서 실행한다.
-
-```bash
-# 예시: 여러 명령어 실행
-pct_script 210 <<'SCRIPT'
-set -e
-apk update
-apk add --no-cache postgresql
-SCRIPT
-```
-
-동작: `ssh <PROXMOX_USER>@<PROXMOX_HOST> "sudo pct exec <CT_ID> -- sh -s"` (stdin으로 스크립트 전달)
 
 ## 공통 트러블슈팅
 
@@ -138,8 +122,8 @@ Error: unable to find template
 **컨테이너에서 인터넷 접속 불가**
 ```bash
 # 컨테이너 내에서 확인
-pct_exec <CT_ID> "ping -c 3 8.8.8.8"
-pct_exec <CT_ID> "cat /etc/resolv.conf"
+ssh root@<IP> "ping -c 3 8.8.8.8"
+ssh root@<IP> "cat /etc/resolv.conf"
 ```
 - OPNsense NAT 규칙 확인 (OPT1 → WAN 아웃바운드 NAT)
 - OPNsense 방화벽 규칙 확인 (OPT1 트래픽 허용)
@@ -149,24 +133,6 @@ pct_exec <CT_ID> "cat /etc/resolv.conf"
 - 컨테이너 DNS가 `10.1.0.1` (OPNsense)을 가리키는지 확인
 - OPNsense DNS 설정 확인 (Unbound 또는 DNS 포워딩)
 
-### 서비스 관리 (OpenRC)
-
-```bash
-# 서비스 상태 확인
-pct_exec <CT_ID> "rc-service <서비스명> status"
-
-# 서비스 시작/중지/재시작
-pct_exec <CT_ID> "rc-service <서비스명> start"
-pct_exec <CT_ID> "rc-service <서비스명> stop"
-pct_exec <CT_ID> "rc-service <서비스명> restart"
-
-# 부팅 시 자동 시작 등록/해제
-pct_exec <CT_ID> "rc-update add <서비스명>"
-pct_exec <CT_ID> "rc-update del <서비스명>"
-
-# 등록된 서비스 목록
-pct_exec <CT_ID> "rc-update show"
-```
 
 ## 서비스별 문서
 
@@ -186,5 +152,6 @@ pct_exec <CT_ID> "rc-update show"
 |------|------|
 | `service/chaekpool/terraform/main.tf` | 컨테이너 리소스 정의 (`for_each`) |
 | `service/chaekpool/terraform/variables.tf` | 컨테이너 스펙 (VMID, IP, 리소스) |
-| `service/chaekpool/scripts/common.sh` | 공용 변수/함수 |
-| `service/chaekpool/scripts/deploy-all.sh` | 전체 배포 오케스트레이터 |
+| `service/chaekpool/ansible/site.yml` | 전체 배포 오케스트레이션 |
+| `service/chaekpool/ansible/group_vars/all/vars.yml` | 공통 변수 (IP, 포트, 버전) |
+| `service/chaekpool/ansible/group_vars/all/vault.yml` | 시크릿 (ansible-vault 암호화) |
