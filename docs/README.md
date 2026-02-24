@@ -1,6 +1,6 @@
 # Proxmox Homelab IaC
 
-OpenTofu + Bash 스크립트 기반 Proxmox 홈랩 인프라 자동화 프로젝트.
+OpenTofu + Ansible 기반 Proxmox 홈랩 인프라 자동화 프로젝트.
 
 **업데이트**: 2026-02-10 - OPNsense HAProxy 2-tier 아키텍처로 변경
 
@@ -15,19 +15,12 @@ proxmox/
 │       └── variables.tf            # 인프라 변수 정의
 ├── service/
 │   └── chaekpool/                  # Chaekpool 서비스 계층
-│       ├── terraform/              # OpenTofu: 서비스 LXC 6개 일괄 생성
-│       │   ├── main.tf             # for_each 패턴 컨테이너 정의
-│       │   ├── providers.tf        # bpg/proxmox provider 설정
-│       │   └── variables.tf        # 컨테이너 스펙 (VMID, IP, 리소스)
-│       └── scripts/                # 서비스별 배포 스크립트
-│           ├── common.sh           # 공용 변수/함수 (pct_exec, pct_push, pct_script)
-│           ├── deploy-all.sh       # 전체 서비스 일괄 배포
-│           ├── traefik/            # CP Traefik (CT 200)
-│           ├── postgresql/         # PostgreSQL + pgAdmin (CT 210)
-│           ├── valkey/             # Valkey + Redis Commander (CT 211)
-│           ├── monitoring/         # Prometheus/Grafana/Loki/Jaeger (CT 220)
-│           ├── jenkins/            # Jenkins (CT 230)
-│           └── kopring/            # Kopring Spring Boot (CT 240)
+│       ├── terraform/              # OpenTofu: 서비스 LXC 6개 + VM 1개 생성
+│       └── ansible/                # Ansible: 설정 관리 (7 roles)
+│           ├── site.yml            # 전체 배포 오케스트레이션
+│           ├── inventory/          # 정적 인벤토리
+│           ├── group_vars/         # 공통 변수 + vault 시크릿
+│           └── roles/              # common, traefik, authelia, postgresql, valkey, monitoring, jenkins
 └── docs/                           # 문서
 ```
 
@@ -54,8 +47,9 @@ proxmox/
                                           ▼
                                     [CP Traefik (CT 200)] ── HTTP 라우팅
                                        │
+                                       ├── authelia.cp.codingmon.dev  → Authelia (10.1.0.101:9091)
                                        ├── api.cp.codingmon.dev       → Kopring (10.1.0.140:8080)
-                                       ├── pgadmin.cp.codingmon.dev  → pgAdmin (10.1.0.110:5050)
+                                       ├── pgadmin.cp.codingmon.dev   → pgAdmin (10.1.0.110:5050)
                                        ├── grafana.cp.codingmon.dev   → Grafana (10.1.0.120:3000)
                                        └── jenkins.cp.codingmon.dev   → Jenkins (10.1.0.130:8080)
 ```
@@ -65,8 +59,8 @@ proxmox/
 | VMID | 호스트명 | IP | 역할 |
 |------|---------|-----|------|
 | 102 | opnsense | <OPNSENSE_WAN_IP> | 방화벽/라우터/SSL 종료/HAProxy (VM) |
-| ~~103~~ | ~~traefik~~ | ~~10.0.0.2~~ | ~~제거됨 (2026-02-10)~~ |
 | 200 | cp-traefik | 10.1.0.100 | CP 리버스 프록시 (HTTP only) |
+| 201 | cp-authelia | 10.1.0.101 | SSO/OIDC (Authelia) |
 | 210 | cp-postgresql | 10.1.0.110 | PostgreSQL + pgAdmin |
 | 211 | cp-valkey | 10.1.0.111 | Valkey + Redis Commander |
 | 220 | cp-monitoring | 10.1.0.120 | Prometheus/Grafana/Loki/Jaeger |
