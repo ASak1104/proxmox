@@ -86,6 +86,41 @@ admin_password = changeme
 - 로그: `/var/log/grafana/`
 - 데이터: `/var/lib/grafana/`
 
+**OIDC 인증 (Authelia)**:
+
+Grafana는 Authelia OIDC를 통한 SSO 로그인을 지원한다.
+
+```ini
+[users]
+allow_sign_up = true                    # OIDC 사용자 자동 생성
+
+[auth]
+oauth_allow_insecure_email_lookup = true # 이메일 기반 기존 사용자 매칭
+
+[auth.generic_oauth]
+enabled = true
+allow_sign_up = true
+name = Authelia
+client_id = grafana
+client_secret = <vault_authelia_oidc_grafana_secret>
+scopes = openid profile email groups
+auth_url = https://authelia.cp.codingmon.dev/api/oidc/authorization
+token_url = https://authelia.cp.codingmon.dev/api/oidc/token
+api_url = https://authelia.cp.codingmon.dev/api/oidc/userinfo
+login_attribute_path = preferred_username
+email_attribute_path = email
+groups_attribute_path = groups
+name_attribute_path = name
+use_pkce = true
+role_attribute_path = contains(groups[*], 'admins') && 'Admin' || 'Viewer'
+```
+
+- `use_pkce = true`: PKCE(Proof Key for Code Exchange) 활성화로 보안 강화
+- `role_attribute_path`: Authelia groups 기반 역할 자동 매핑 — `admins` 그룹이면 Admin, 나머지는 Viewer
+- `oauth_allow_insecure_email_lookup`: 이메일이 일치하는 기존 로컬 사용자와 OIDC 계정을 자동 연결
+- OIDC 클라이언트 시크릿은 `vault.yml`의 `vault_authelia_oidc_grafana_secret` (평문, Authelia 측은 PBKDF2 해시)
+- 소스: `roles/monitoring/templates/grafana.ini.j2`
+
 ### Grafana 데이터소스 (`/etc/grafana/provisioning/datasources/datasources.yml`)
 
 3개 데이터소스가 자동 프로비저닝된다:
