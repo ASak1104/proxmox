@@ -1,6 +1,6 @@
 # Proxmox Home Server Infrastructure
 
-OpenTofu + Bash 기반 Proxmox 홈랩 인프라 자동화 프로젝트. OPNsense 방화벽 VM과 6개의 Alpine LXC 컨테이너로 구성된 2-tier 아키텍처를 코드로 관리하고 있음
+OpenTofu + Ansible 기반 Proxmox 홈랩 인프라 자동화 프로젝트. OPNsense 방화벽 VM과 6개의 Alpine LXC 컨테이너 + 1 VM으로 구성된 2-tier 아키텍처를 코드로 관리하고 있음
 
 ## Architecture
 
@@ -31,13 +31,13 @@ NAT Router (port forwarding)
 │                    │   HTTP routing      │          │
 │                    └────────┬────────────┘          │
 │                             │                       │
-│          ┌──────┬──────┬───┴────┬─────────┐         │
-│          ▼      ▼      ▼       ▼         ▼          │
-│       CT 210 CT 211 CT 220  CT 230    CT 240        │
-│       Postgres Valkey Monitor Jenkins  Kopring      │
-│       pgAdmin  Redis  Grafana                       │
-│                Cmdr   Prom/Loki                     │
-│                       Jaeger                        │
+│          ┌───────┬──────┬──────┬───┴────┬───────┐    │
+│          ▼       ▼      ▼      ▼       ▼       ▼    │
+│       CT 201 CT 210 CT 211 CT 220  CT 230  CT 240   │
+│       Auth-  Postgres Valkey Monitor Jenkins Kopring │
+│       elia   pgAdmin  Redis  Grafana                │
+│                       Cmdr   Prom/Loki              │
+│                              Jaeger                 │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -57,11 +57,27 @@ VMID 규칙: `2GN` → IP `10.1.0.(100 + G×10 + N)`
 | VMID | Service | IP | External | Resources |
 |------|---------|----|----------|-----------|
 | 200 | CP Traefik | 10.1.0.100 | — | 1 vCPU, 512MB, 5GB |
+| 201 | Authelia (SSO) | 10.1.0.101 | authelia.cp.codingmon.dev | 1 vCPU, 256MB, 2GB |
 | 210 | PostgreSQL + pgAdmin | 10.1.0.110 | pgadmin.cp.codingmon.dev | 2 vCPU, 2GB, 20GB |
 | 211 | Valkey + Redis Commander | 10.1.0.111 | — | 1 vCPU, 1GB, 10GB |
 | 220 | Prometheus, Grafana, Loki, Jaeger | 10.1.0.120 | grafana.cp.codingmon.dev | 4 vCPU, 4GB, 30GB |
 | 230 | Jenkins | 10.1.0.130 | jenkins.cp.codingmon.dev | 2 vCPU, 2GB, 20GB |
 | 240 | Kopring (Spring Boot) | 10.1.0.140 | api.cp.codingmon.dev | 2 vCPU, 2GB, 10GB |
+
+## Service Links
+
+| Service | URL | Note |
+|---------|-----|------|
+| Proxmox WebUI | https://pve.codingmon.dev | 인프라 관리 |
+| OPNsense WebUI | https://opnsense.codingmon.dev | 방화벽/라우터 관리 |
+| Authelia | https://authelia.cp.codingmon.dev | SSO/OIDC |
+| pgAdmin | https://pgadmin.cp.codingmon.dev | DB 관리 |
+| Grafana | https://grafana.cp.codingmon.dev | 모니터링 대시보드 |
+| Jenkins | https://jenkins.cp.codingmon.dev | CI/CD |
+| Kopring API | https://api.cp.codingmon.dev | 애플리케이션 |
+| Prometheus | http://10.1.0.120:9090 | VPN 전용 |
+| Jaeger | http://10.1.0.120:16686 | VPN 전용 |
+| Redis Commander | http://10.1.0.111:8081 | VPN 전용 |
 
 ## Prerequisites
 
@@ -76,8 +92,8 @@ VMID 규칙: `2GN` → IP `10.1.0.(100 + G×10 + N)`
 
 ```bash
 # terraform.tfvars 생성 (각 레이어별)
-cp core/terraform/terraform.tfvars.example core/terraform/terraform.tfvars
-cp service/chaekpool/terraform/terraform.tfvars.example service/chaekpool/terraform/terraform.tfvars
+cp core/terraform/terraform.tfvars.template core/terraform/terraform.tfvars
+cp service/chaekpool/terraform/terraform.tfvars.template service/chaekpool/terraform/terraform.tfvars
 # 환경에 맞게 값 수정
 ```
 
@@ -96,26 +112,31 @@ cd service/chaekpool/terraform && tofu init && tofu plan && tofu apply
 ### 3. 서비스 배포
 
 ```bash
-# 전체 배포 (의존성 순서 자동 처리)
-bash service/chaekpool/scripts/deploy-all.sh
+# VPN 연결
+bash scripts/vpn.sh up
+
+# Ansible 사전 준비
+cd service/chaekpool/ansible
+ansible-galaxy collection install -r requirements.yml
+ansible all -m ping
+
+# 전체 배포
+ansible-playbook site.yml
 
 # 개별 배포
-bash service/chaekpool/scripts/traefik/deploy.sh
-bash service/chaekpool/scripts/postgresql/deploy.sh
-bash service/chaekpool/scripts/valkey/deploy.sh
-bash service/chaekpool/scripts/monitoring/deploy.sh
-bash service/chaekpool/scripts/jenkins/deploy.sh
-bash service/chaekpool/scripts/kopring/deploy.sh
+ansible-playbook site.yml -l cp-traefik
+ansible-playbook site.yml -l cp-authelia
+ansible-playbook site.yml -l cp-postgresql
+ansible-playbook site.yml -l cp-valkey
+ansible-playbook site.yml -l cp-monitoring
+ansible-playbook site.yml -l cp-jenkins
 ```
-
-배포 순서: Traefik → PostgreSQL, Valkey → Monitoring, Jenkins → Kopring (PostgreSQL + Valkey 의존)
 
 ### 4. 서비스 관리
 
 ```bash
-# OpenRC 서비스 제어 (Alpine LXC)
-ssh admin@10.0.0.254 "sudo pct exec <CT_ID> -- rc-service <service> status"
-ssh admin@10.0.0.254 "sudo pct exec <CT_ID> -- rc-service <service> restart"
+# VPN 연결 후 직접 SSH (OpenRC)
+ssh root@10.1.0.1xx "rc-service <service> status|start|stop|restart"
 ```
 
 ## Project Structure
@@ -126,16 +147,14 @@ ssh admin@10.0.0.254 "sudo pct exec <CT_ID> -- rc-service <service> restart"
 │   └── terraform/           # OPNsense VM (102) 프로비저닝
 ├── service/
 │   └── chaekpool/
-│       ├── terraform/       # LXC 컨테이너 6개 프로비저닝
-│       └── scripts/
-│           ├── common.sh    # SSH 헬퍼 함수 (pct_exec, pct_push, pct_script)
-│           ├── deploy-all.sh
-│           ├── traefik/     # CT 200 배포 스크립트 + 설정
-│           ├── postgresql/  # CT 210
-│           ├── valkey/      # CT 211
-│           ├── monitoring/  # CT 220
-│           ├── jenkins/     # CT 230
-│           └── kopring/     # CT 240
+│       ├── terraform/       # LXC 6개 + VM 1개 프로비저닝
+│       └── ansible/         # 설정 관리 (7 roles)
+│           ├── site.yml
+│           ├── inventory/
+│           ├── group_vars/
+│           └── roles/       # common, traefik, authelia, postgresql, valkey, monitoring, jenkins
+├── scripts/
+│   └── vpn.sh              # WireGuard VPN 관리
 └── docs/                    # 문서 (한국어)
     ├── README.md            # 문서 색인 및 읽기 순서
     ├── getting-started.md
