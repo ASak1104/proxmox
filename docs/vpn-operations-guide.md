@@ -1495,69 +1495,30 @@ curl -k -H "Authorization: PVEAPIToken=..." \
 
 ---
 
-### 8.3 배포 스크립트에서 사용하는 SSH 헬퍼 함수
+### 8.3 Ansible 배포에서 사용하는 SSH 접속
 
-**위치**: `service/chaekpool/scripts/common.sh`
-
-**2026-02-10 변경사항**:
-```bash
-# Before
-PROXMOX_HOST="<PROXMOX_HOST>"
-
-# After (VPN 필수)
-PROXMOX_HOST="<PROXMOX_HOST>"
-```
-
-**3가지 핵심 함수**:
+VPN 연결 후 Ansible이 각 컨테이너에 직접 SSH로 접속하여 설정을 관리한다.
 
 ```bash
-# 1. pct_exec: 컨테이너 내 명령 실행
-pct_exec() {
-    local ct_id="$1"; shift
-    ssh admin@${PROXMOX_HOST} "sudo pct exec ${ct_id} -- sh -c '$*'"
-}
-
-# 사용 예시
-pct_exec 200 "rc-service traefik status"
-pct_exec 210 "psql -U postgres -c 'SELECT version()'"
-
-# 2. pct_push: 파일 전송 (Mac → Proxmox /tmp → 컨테이너)
-pct_push() {
-    local ct_id="$1"
-    local local_path="$2"
-    local remote_path="$3"
-    local tmp="/tmp/$(basename "${local_path}")"
-    ssh admin@${PROXMOX_HOST} "sudo rm -f ${tmp}"
-    ssh admin@${PROXMOX_HOST} "cat > ${tmp}" < "${local_path}"
-    ssh admin@${PROXMOX_HOST} "sudo pct push ${ct_id} ${tmp} ${remote_path} && rm -f ${tmp}"
-}
-
-# 사용 예시
-pct_push 200 ./configs/traefik.yml /etc/traefik/traefik.yml
-pct_push 210 ./configs/pg_hba.conf /etc/postgresql/18/main/pg_hba.conf
-
-# 3. pct_script: Heredoc 스크립트 실행 (stdin으로 전달)
-pct_script() {
-    local ct_id="$1"
-    ssh admin@${PROXMOX_HOST} "sudo pct exec ${ct_id} -- sh -s"
-}
-
-# 사용 예시
-pct_script 200 <<'SCRIPT'
-set -e
-apk update
-apk add traefik
-rc-update add traefik
-SCRIPT
-```
-
-**배포 스크립트 실행 시 VPN 필수**:
-```bash
-# 1. VPN 연결 확인
+# VPN 연결 확인
 ping -c 1 10.0.0.254 || (echo "VPN 연결 필요" && exit 1)
 
-# 2. 배포 실행
-bash service/chaekpool/scripts/traefik/deploy.sh
+# Ansible 배포
+cd service/chaekpool/ansible
+ansible-playbook site.yml
+
+# 개별 서비스 배포
+ansible-playbook site.yml -l cp-traefik
+```
+
+**수동 서비스 관리** (VPN 직접 SSH):
+```bash
+# 서비스 상태 확인
+ssh root@10.1.0.100 "rc-service traefik status"
+ssh root@10.1.0.110 "psql -U postgres -c 'SELECT version()'"
+
+# 서비스 재시작
+ssh root@10.1.0.120 "rc-service grafana restart"
 ```
 
 ---
@@ -1724,29 +1685,20 @@ ssh root@10.0.0.1 "curl -sk -u KEY:SECRET https://localhost/api/..."
 
 ---
 
-### Q5: pct_exec과 pct exec의 차이는?
+### Q5: 컨테이너 접속 방법은?
 
-**`pct_exec`**: `common.sh`의 헬퍼 함수
+VPN 연결 후 직접 SSH로 접속한다:
 ```bash
-# 정의
-pct_exec() {
-    ssh <PROXMOX_USER>@<PROXMOX_HOST> "sudo pct exec ${ct_id} -- sh -c '$*'"
-}
+# 직접 SSH (VPN 필수)
+ssh root@10.1.0.100    # CP Traefik
+ssh root@10.1.0.110    # PostgreSQL
+ssh root@10.1.0.120    # Monitoring
 
-# 사용
-pct_exec 200 "rc-service traefik status"
+# 서비스 관리
+ssh root@10.1.0.100 "rc-service traefik status"
 ```
 
-**`pct exec`**: Proxmox 명령어
-```bash
-# Proxmox 호스트에서 직접 실행
-pct exec 200 -- rc-service traefik status
-
-# 원격에서 실행 (SSH 경유)
-ssh <PROXMOX_USER>@<PROXMOX_HOST> "sudo pct exec 200 -- rc-service traefik status"
-```
-
-**관계**: `pct_exec` 함수가 내부적으로 `pct exec`를 호출.
+**참고**: Proxmox 호스트에서 `pct exec`로도 접근 가능하지만, Ansible/VPN 환경에서는 직접 SSH를 사용한다.
 
 ---
 

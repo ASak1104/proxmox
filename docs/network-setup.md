@@ -111,14 +111,14 @@ NAT Router에서 다음 포트포워딩이 필수:
 
 CP 서비스 접속 시 502가 발생하면:
 
-1. **백엔드 서비스 실행 확인**: 해당 CT에서 서비스 상태 확인
+1. **백엔드 서비스 실행 확인**: 해당 컨테이너에서 서비스 상태 확인
    ```bash
-   pct_exec <CT_ID> "rc-service <service> status"
+   ssh root@<IP> "rc-service <service> status"
    ```
-2. **CP Traefik 라우팅 확인**: `service/chaekpool/scripts/traefik/configs/services.yml`에 해당 서비스의 라우터/서비스 정의가 있는지 확인
+2. **CP Traefik 라우팅 확인**: `service/chaekpool/ansible/roles/traefik/templates/services.yml.j2`에 해당 서비스의 라우터/서비스 정의가 있는지 확인
 3. **네트워크 연결 확인**: CT 200에서 백엔드로 접근 가능한지 테스트
    ```bash
-   pct_exec 200 "wget -qO- http://10.1.0.120:3100/ready"
+   ssh root@10.1.0.100 "wget -qO- http://10.1.0.120:3100/ready"
    ```
 
 ### 인증서 오류 (NET::ERR_CERT_COMMON_NAME_INVALID)

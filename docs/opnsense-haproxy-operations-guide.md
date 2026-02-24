@@ -472,7 +472,7 @@ CP Traefik이 HTTP 라우팅을 담당하므로 HAProxy에서는 추가 설정�
 
 #### Step 1: CP Traefik에 라우팅 규칙 추가
 
-`service/chaekpool/scripts/traefik/configs/services.yml`에 새 서비스 라우팅 추가:
+`service/chaekpool/ansible/roles/traefik/templates/services.yml.j2`에 새 서비스 라우팅 추가:
 
 ```yaml
 http:
@@ -636,7 +636,7 @@ curl -sk -u KEY:SECRET -X POST https://localhost/api/haproxy/service/reconfigure
 
 1. `service/chaekpool/terraform/variables.tf`의 `containers` map에 항목 추가
 2. `tofu apply`로 컨테이너 생성
-3. 배포 스크립트 작성 (`service/chaekpool/scripts/<service>/deploy.sh`)
+3. Ansible 역할 작성 (`service/chaekpool/ansible/roles/<service>/`)
 4. CP Traefik에 라우팅 규칙 추가 (위 5.1 참조)
 5. 인증서에 도메인 추가 (위 5.1 참조)
 

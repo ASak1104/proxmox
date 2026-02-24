@@ -89,9 +89,12 @@ ssh-add ~/.ssh/id_ed25519
 cp core/.core.env.template core/.core.env
 # 편집하여 Proxmox API 토큰, SSH 공개키 등 실제 값 입력
 
-# Chaekpool 서비스 시크릿
-cp service/chaekpool/.chaekpool.env.template service/chaekpool/.chaekpool.env
-# 편집하여 서비스 비밀번호, Authelia 시크릿 등 실제 값 입력
+# Chaekpool 서비스 시크릿 (ansible-vault 암호화)
+# vault 비밀번호 파일 생성
+echo "your-vault-password" > ~/.vault_pass
+chmod 600 ~/.vault_pass
+# 시크릿 편집
+ansible-vault edit service/chaekpool/ansible/group_vars/all/vault.yml
 ```
 
 ### terraform.tfvars 설정
@@ -124,7 +127,7 @@ ssh_public_key    = "<SSH_PUBLIC_KEY from core/.core.env>"
 
 ## 4. 비밀번호 변경
 
-`service/chaekpool/.chaekpool.env`에서 서비스 비밀번호를 설정한다. `common.sh`의 기본값 `changeme`를 `.chaekpool.env`에서 override한다.
+`service/chaekpool/ansible/group_vars/all/vault.yml`에서 서비스 비밀번호를 관리한다. `ansible-vault edit`으로 편집한다.
 
 주요 변수:
 
@@ -138,8 +141,7 @@ ssh_public_key    = "<SSH_PUBLIC_KEY from core/.core.env>"
 
 비밀번호를 변경하면 관련 설정 파일도 함께 수정해야 한다:
 
-- `service/chaekpool/scripts/valkey/configs/valkey.conf` - `requirepass` 항목
-- `service/chaekpool/scripts/kopring/configs/application.yml` - `spring.datasource.password`, `spring.data.redis.password`
+- Ansible vault에서 비밀번호를 변경하면 `ansible-playbook site.yml`로 전체 재배포 시 자동 반영
 
 ## 5. 사전 요구사항 체크리스트
 
@@ -152,10 +154,9 @@ ssh_public_key    = "<SSH_PUBLIC_KEY from core/.core.env>"
 - [ ] SSH Agent 실행 확인 (`ssh-add -l`)
 - [ ] DNS 설정 (`*.codingmon.dev → <OPNSENSE_WAN_IP>`)
 - [ ] `core/.core.env` 생성 (`.core.env.template`에서 복사)
-- [ ] `service/chaekpool/.chaekpool.env` 생성 (`.chaekpool.env.template`에서 복사)
+- [ ] `~/.vault_pass` 생성 (ansible-vault 비밀번호)
 - [ ] `core/terraform/terraform.tfvars` 생성 (`terraform.tfvars.template`에서 복사)
 - [ ] `service/chaekpool/terraform/terraform.tfvars` 생성 (`terraform.tfvars.template`에서 복사)
-- [ ] `.chaekpool.env` 비밀번호 변경 (`changeme` → 실제 비밀번호)
-- [ ] 관련 설정 파일 비밀번호 동기화
+- [ ] `vault.yml` 비밀번호 변경 (`ansible-vault edit`)
 
 모든 항목을 확인한 후 [인프라 배포](infra-deployment.md)로 진행한다.
