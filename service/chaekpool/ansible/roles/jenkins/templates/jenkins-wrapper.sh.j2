@@ -2,11 +2,12 @@
 # Jenkins wrapper script for supervise-daemon
 
 export JENKINS_HOME="{{ jenkins_home }}"
-export JAVA_HOME="/usr/lib/jvm/java-17-openjdk"
+export JAVA_HOME="/usr/lib/jvm/java-21-openjdk"
 export CASC_JENKINS_CONFIG="{{ jenkins_home }}/casc.yaml"
 
 cd "$JENKINS_HOME"
 exec /usr/bin/java -Xmx1024m \
     -Djava.awt.headless=true \
     -Djenkins.install.runSetupWizard=false \
+    -Djenkins.security.csp.CspHeader.headerName=Content-Security-Policy \
     -jar {{ jenkins_opt }}/jenkins.war --httpPort={{ port_jenkins }}
