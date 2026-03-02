@@ -1,0 +1,58 @@
+---
+# --- Java 25 JRE ---
+- name: Install Java 25 JRE
+  ansible.builtin.apk:
+    name: openjdk25-jre
+    state: present
+    update_cache: true
+
+# --- System user ---
+- name: Create api user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: service_user
+  vars:
+    svc_name: api
+    svc_home: "{{ api_home }}"
+    svc_dirs:
+      - "{{ api_home }}"
+      - "{{ api_opt }}"
+      - "{{ api_log_dir }}"
+      - "{{ api_config_dir }}"
+
+# --- Jenkins deploy SSH key ---
+- name: Ensure root .ssh directory exists
+  ansible.builtin.file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Deploy Jenkins deploy public key
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ vault_jenkins_deploy_public_key }}"
+    state: present
+
+# --- Wrapper script ---
+- name: Deploy wrapper script
+  ansible.builtin.template:
+    src: api-wrapper.sh.j2
+    dest: "{{ api_opt }}/api-wrapper.sh"
+    owner: api
+    group: api
+    mode: "0755"
+  notify: restart api
+
+# --- OpenRC service (copy + enable only, no start — JAR absent on first deploy) ---
+- name: Deploy OpenRC service file
+  ansible.builtin.copy:
+    src: api.openrc
+    dest: /etc/init.d/api
+    mode: "0755"
+
+- name: Enable api service at boot
+  ansible.builtin.service:
+    name: api
+    enabled: true

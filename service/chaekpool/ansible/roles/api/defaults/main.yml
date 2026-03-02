@@ -1,0 +1,6 @@
+---
+api_home: /var/lib/api
+api_opt: /opt/api
+api_log_dir: /var/log/api
+api_config_dir: /etc/api
+api_jar: "{{ api_opt }}/api.jar"

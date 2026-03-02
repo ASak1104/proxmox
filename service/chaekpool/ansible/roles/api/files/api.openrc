@@ -1,0 +1,21 @@
+#!/sbin/openrc-run
+
+description="Chaekpool API (Spring Boot)"
+command="/opt/api/api-wrapper.sh"
+command_user="api:api"
+directory="/var/lib/api"
+
+supervisor="supervise-daemon"
+respawn_max=0
+respawn_delay=5
+respawn_period=60
+output_log="/var/log/api/api.log"
+error_log="/var/log/api/api.log"
+
+depend() {
+    need net
+}
+
+start_pre() {
+    checkpath --directory --owner api:api --mode 0755 /var/log/api
+}
