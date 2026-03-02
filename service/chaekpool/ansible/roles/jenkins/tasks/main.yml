@@ -14,10 +14,11 @@
     enabled: true
     state: started
 
-- name: Install Java and fonts
+- name: Install Java, Git and fonts
   ansible.builtin.apk:
     name:
       - openjdk21
+      - git
       - fontconfig
       - freetype
       - ttf-dejavu

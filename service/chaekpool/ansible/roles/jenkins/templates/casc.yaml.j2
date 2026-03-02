@@ -20,7 +20,7 @@ jenkins:
       allowAnonymousRead: false
   views:
     - list:
-        name: "dev"
+        name: "{{ deploy_env }}"
         includeRegex: ".*"
         columns:
           - status
@@ -32,7 +32,7 @@ jenkins:
           - buildButton
 
 {% set api_env_content %}
-SPRING_PROFILES_ACTIVE=dev
+SPRING_PROFILES_ACTIVE={{ deploy_env }}
 SERVER_PORT={{ port_api }}
 POSTGRES_HOST={{ ip_postgresql }}
 POSTGRES_PORT={{ port_postgresql }}
@@ -68,15 +68,18 @@ credentials:
                   privateKey: "{{ vault_jenkins_deploy_private_key }}"
           - file:
               scope: GLOBAL
-              id: "api-env-file"
+              id: "api-env-{{ deploy_env }}"
               fileName: ".env"
               secretBytes: "{{ api_env_content | b64encode }}"
-              description: "API environment variables (CT 240)"
+              description: "API environment variables - {{ deploy_env }} (CT 240)"
 
 jobs:
   - script: >
       pipelineJob('chaekpool-api') {
         description('Chaekpool API - Build, Test, Deploy')
+        parameters {
+          stringParam('DEPLOY_ENV', '{{ deploy_env }}', 'Deployment environment')
+        }
         definition {
           cpsScm {
             scm {

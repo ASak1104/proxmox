@@ -44,5 +44,8 @@ pg_user: "{{ vault_pg_user }}"
 # pgAdmin
 pgadmin_email: "{{ vault_pgadmin_email }}"
 
+# Environment
+deploy_env: dev
+
 # Domain
 base_domain: "cp.codingmon.dev"
