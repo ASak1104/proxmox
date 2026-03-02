@@ -96,7 +96,7 @@
 
 - name: Grant database privileges
   community.postgresql.postgresql_privs:
-    database: "{{ pg_db }}"
+    login_db: "{{ pg_db }}"
     roles: "{{ pg_user }}"
     type: database
     privs: ALL
@@ -192,20 +192,26 @@
   when: not _pgadmin_db.stat.exists
   changed_when: true
 
+- name: Deploy pgAdmin .pgpass
+  ansible.builtin.copy:
+    content: "{{ ip_postgresql }}:{{ port_postgresql }}:*:{{ pg_user }}:{{ vault_pg_password }}"
+    dest: "{{ pgadmin_data_dir }}/.pgpass"
+    owner: pgadmin
+    group: pgadmin
+    mode: "0600"
+
 - name: Deploy pgAdmin servers.json
   ansible.builtin.template:
     src: pgadmin_servers.json.j2
     dest: /tmp/pgadmin_servers.json
     mode: "0644"
-  when: not _pgadmin_db.stat.exists
 
 - name: Load servers into pgAdmin
   ansible.builtin.shell:
     cmd: |
       cd {{ pgadmin_home }}/venv/lib/python{{ _python_version.stdout }}/site-packages/pgadmin4 && \
       PYTHONPATH="{{ pgadmin_home }}" {{ pgadmin_home }}/venv/bin/python3 setup.py \
-        load-servers /tmp/pgadmin_servers.json --user "{{ pgadmin_email }}"
-  when: not _pgadmin_db.stat.exists
+        load-servers /tmp/pgadmin_servers.json --replace --user "{{ pgadmin_email }}"
   changed_when: true
 
 - name: Clean up servers.json

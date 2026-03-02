@@ -7,7 +7,9 @@
       "Port": {{ port_postgresql }},
       "MaintenanceDB": "{{ pg_db }}",
       "Username": "{{ pg_user }}",
+      "SharedUsername": "{{ pg_user }}",
       "SSLMode": "prefer",
+      "PassFile": "{{ pgadmin_data_dir }}/.pgpass",
       "Shared": true
     }
   }

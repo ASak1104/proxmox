@@ -101,7 +101,7 @@ variable "containers" {
       cores  = 4
     }
     # App (240-249)
-    cp-kopring = {
+    cp-api = {
       id     = 240
       ip     = "10.1.0.140/24"
       memory = 2048
