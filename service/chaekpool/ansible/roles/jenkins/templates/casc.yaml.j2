@@ -65,21 +65,18 @@ credentials:
               description: "API deploy SSH key (CT 240)"
               privateKeySource:
                 directEntry:
-                  privateKey: "{{ vault_jenkins_deploy_private_key }}"
+                  privateKey: {{ vault_jenkins_deploy_private_key | to_json }}
           - file:
               scope: GLOBAL
-              id: "api-env-{{ deploy_env }}"
+              id: "api-env"
               fileName: ".env"
               secretBytes: "{{ api_env_content | b64encode }}"
-              description: "API environment variables - {{ deploy_env }} (CT 240)"
+              description: "API environment variables (CT 240)"
 
 jobs:
   - script: >
       pipelineJob('chaekpool-api') {
         description('Chaekpool API - Build, Test, Deploy')
-        parameters {
-          stringParam('DEPLOY_ENV', '{{ deploy_env }}', 'Deployment environment')
-        }
         definition {
           cpsScm {
             scm {

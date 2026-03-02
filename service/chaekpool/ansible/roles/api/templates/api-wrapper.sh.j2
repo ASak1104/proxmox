@@ -1,5 +1,7 @@
 #!/bin/sh
+set -a
 . {{ api_config_dir }}/.env
+set +a
 exec /usr/lib/jvm/java-25-openjdk/bin/java -Xmx512m -Xms256m \
     -Djava.security.egd=file:/dev/./urandom \
     -jar {{ api_jar }}
