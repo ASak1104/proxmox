@@ -1241,7 +1241,7 @@
         "type": "query"
       },
       {
-        "current": { "selected": false, "text": "local", "value": "local" },
+        "current": { "selected": false, "text": "dev", "value": "dev" },
         "datasource": { "type": "loki", "uid": "loki" },
         "definition": "",
         "hide": 0,
