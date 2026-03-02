@@ -49,3 +49,6 @@ deploy_env: dev
 
 # Domain
 base_domain: "cp.codingmon.dev"
+
+# CORS
+cors_allowed_origins: "https://api.{{ base_domain }}"

@@ -49,7 +49,7 @@ CRYPTO_SECRET_KEY={{ vault_api_crypto_secret_key }}
 KAKAO_CLIENT_ID={{ vault_api_kakao_client_id }}
 KAKAO_CLIENT_SECRET={{ vault_api_kakao_client_secret }}
 KAKAO_REDIRECT_URI=https://api.{{ base_domain }}/oauth2/callback/kakao
-CORS_ALLOWED_ORIGINS=https://api.{{ base_domain }}
+CORS_ALLOWED_ORIGINS={{ cors_allowed_origins }}
 LOKI_URL=http://{{ ip_monitoring }}:{{ port_loki }}/loki/api/v1/push
 OTLP_ENDPOINT=http://{{ ip_monitoring }}:{{ port_jaeger_otlp_http }}/v1/traces
 {% endset %}
