@@ -57,7 +57,7 @@ HTTP-01 챌린지가 작동하려면:
 | 인증서 | 도메인 |
 |--------|--------|
 | `infra-multi-san` | `pve.codingmon.dev`, `opnsense.codingmon.dev` |
-| `cp-multi-san` | `authelia.cp.codingmon.dev`, `pgadmin.cp.codingmon.dev`, `grafana.cp.codingmon.dev`, `jenkins.cp.codingmon.dev` |
+| `cp-multi-san` | `authelia.cp.codingmon.dev`, `pgadmin.cp.codingmon.dev`, `grafana.cp.codingmon.dev`, `jenkins.cp.codingmon.dev`, `api.cp.codingmon.dev` |
 
 ### 새 서비스 추가 시 인증서 업데이트 절차
 

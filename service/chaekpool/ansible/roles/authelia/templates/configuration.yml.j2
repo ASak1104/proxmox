@@ -21,7 +21,7 @@ authentication_backend:
 access_control:
   default_policy: "deny"
   rules:
-    # Kopring API — 자체 인증
+    # API — 자체 인증
     - domain: "api.{{ base_domain }}"
       policy: "bypass"
     # Authelia 포탈 자체

@@ -57,7 +57,7 @@ middlewares:
 access_control:
   default_policy: "deny"
   rules:
-    - domain: "api.cp.codingmon.dev"       # Kopring API — bypass (자체 인증)
+    - domain: "api.cp.codingmon.dev"       # API — bypass (자체 인증)
       policy: "bypass"
     - domain: "authelia.cp.codingmon.dev"   # Authelia 포탈 — bypass
       policy: "bypass"

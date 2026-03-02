@@ -34,7 +34,7 @@ NAT Router (port forwarding)
 │     ┌────────┬────────┬────────┬───┴────┬────────┐       │
 │     ▼        ▼        ▼        ▼        ▼        ▼       │
 │  CT 201   CT 210   CT 211   CT 220   CT 230   CT 240     │
-│  Authelia Postgres Valkey   Monitor  Jenkins  Kopring    │
+│  Authelia Postgres Valkey   Monitor  Jenkins  API        │
 │           pgAdmin  Redis    Grafana                      │
 │                    Cmdr     Prom/Loki                    │
 │                             Jaeger                       │
@@ -62,7 +62,7 @@ VMID 규칙: `2GN` → IP `10.1.0.(100 + G×10 + N)`
 | 211 | Valkey + Redis Commander | 10.1.0.111 | — | 1 vCPU, 1GB, 10GB |
 | 220 | Prometheus, Grafana, Loki, Jaeger | 10.1.0.120 | grafana.cp.codingmon.dev | 4 vCPU, 4GB, 30GB |
 | 230 | Jenkins | 10.1.0.130 | jenkins.cp.codingmon.dev | 2 vCPU, 2GB, 20GB |
-| 240 | Kopring (Spring Boot) | 10.1.0.140 | api.cp.codingmon.dev | 2 vCPU, 2GB, 10GB |
+| 240 | API (Spring Boot) | 10.1.0.140 | api.cp.codingmon.dev | 2 vCPU, 2GB, 10GB |
 
 ## Service Links
 
@@ -74,7 +74,7 @@ VMID 규칙: `2GN` → IP `10.1.0.(100 + G×10 + N)`
 | pgAdmin | https://pgadmin.cp.codingmon.dev | DB 관리 |
 | Grafana | https://grafana.cp.codingmon.dev | 모니터링 대시보드 |
 | Jenkins | https://jenkins.cp.codingmon.dev | CI/CD |
-| Kopring API | https://api.cp.codingmon.dev | 애플리케이션 |
+| API | https://api.cp.codingmon.dev | 애플리케이션 |
 | Prometheus | http://10.1.0.120:9090 | VPN 전용 |
 | Jaeger | http://10.1.0.120:16686 | VPN 전용 |
 | Redis Commander | http://10.1.0.111:8081 | VPN 전용 |
@@ -183,7 +183,7 @@ ssh root@10.1.0.1xx "rc-service <service> status|start|stop|restart"
 | Database | PostgreSQL 18, Valkey 9 |
 | Monitoring | Prometheus, Grafana, Loki, Jaeger |
 | CI/CD | Jenkins LTS |
-| Application | Kotlin + Spring Boot (Kopring) |
+| Application | Kotlin + Spring Boot |
 
 ## Documentation
 

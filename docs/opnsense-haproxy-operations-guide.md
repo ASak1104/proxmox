@@ -56,7 +56,7 @@ Internet → NAT Router (포트포워딩 80,443 → <OPNSENSE_WAN_IP>)
 | 인증서 이름 | 포함 도메인 | 용도 |
 |------------|-----------|------|
 | `infra-multi-san` | pve.codingmon.dev, opnsense.codingmon.dev | 인프라 서비스 |
-| `cp-multi-san` | authelia/pgadmin/grafana/jenkins.cp.codingmon.dev | Chaekpool 서비스 |
+| `cp-multi-san` | authelia/pgadmin/grafana/jenkins/api.cp.codingmon.dev | Chaekpool 서비스 |
 
 **분리 이유**: Let's Encrypt HTTP-01 챌린지에서 도메인 수가 많을수록 실패 확률이 높음. 인프라와 서비스를 분리하면 독립적으로 갱신/재발급 가능.
 
@@ -500,6 +500,7 @@ cp-multi-san 인증서에 새 도메인을 추가하고 재발급:
   -d grafana.cp.codingmon.dev \
   -d jenkins.cp.codingmon.dev \
   -d authelia.cp.codingmon.dev \
+  -d api.cp.codingmon.dev \
   -d newservice.cp.codingmon.dev \
   --keylength ec-256 \
   -w /var/etc/acme-client/challenges \
@@ -814,6 +815,7 @@ pfctl -t sshlockout -T flush
   -d grafana.cp.codingmon.dev \
   -d jenkins.cp.codingmon.dev \
   -d authelia.cp.codingmon.dev \
+  -d api.cp.codingmon.dev \
   --keylength ec-256 \
   -w /var/etc/acme-client/challenges \
   --server letsencrypt \
@@ -867,11 +869,11 @@ pfctl -t sshlockout -T flush
 
 ### 9.6 Trust Store 인증서
 
-| Name | refid | 용도 |
-|------|-------|------|
-| infra-multi-san | 698b0846c3b2f | pve + opnsense SSL |
-| cp-multi-san | 698b0846cee09 | 4개 cp 도메인 SSL |
-| Web GUI TLS certificate (x2) | 690acde654bc5, 69884d1e511c4 | OPNsense 자체 WebUI |
+| Name | 용도 |
+|------|------|
+| pve.codingmon.dev (ACME Client) | infra-multi-san: pve + opnsense SSL |
+| authelia.cp.codingmon.dev (ACME Client) | cp-multi-san: 5개 cp 도메인 SSL |
+| Web GUI TLS certificate | OPNsense 자체 WebUI (자체서명) |
 
 ---
 

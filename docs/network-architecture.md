@@ -46,7 +46,7 @@ VMID `2GN` → IP `10.1.0.(100 + G×10 + N)`
 | **Valkey** | **211** | **10.1.0.111** | 6379 (Valkey), 8081 (Redis Commander) | 캐시 + 웹 관리 |
 | **Monitoring** | **220** | **10.1.0.120** | 9090 (Prometheus), 3000 (Grafana), 3100 (Loki), 16686 (Jaeger UI), 4317 (OTLP gRPC), 4318 (OTLP HTTP) | 통합 모니터링 |
 | **Jenkins** | **230** | **10.1.0.130** | 8080 | CI/CD |
-| **Kopring** | **240** | **10.1.0.140** | 8080 | 애플리케이션 서버 |
+| **API** | **240** | **10.1.0.140** | 8080 | 애플리케이션 서버 |
 
 ---
 
@@ -72,7 +72,7 @@ OPNsense (VM 102, <OPNSENSE_WAN_IP>)
   │     └─── 서비스 라우팅 (CP Traefik 경유)
   │           └─ *.cp.codingmon.dev       ──▶ CP Traefik (10.1.0.100:80, HTTP)
   │                                             │  Host 헤더 기반 라우팅
-  │                                             ├─ api.cp.codingmon.dev        ──▶ 10.1.0.140:8080  (Kopring)
+  │                                             ├─ api.cp.codingmon.dev        ──▶ 10.1.0.140:8080  (API)
   │                                             ├─ pgadmin.cp.codingmon.dev   ──▶ 10.1.0.110:5050  (pgAdmin)
   │                                             ├─ grafana.cp.codingmon.dev    ──▶ 10.1.0.120:3000  (Grafana)
   │                                             └─ jenkins.cp.codingmon.dev    ──▶ 10.1.0.130:8080  (Jenkins)

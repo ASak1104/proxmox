@@ -52,7 +52,7 @@ api:
 
 | 도메인 | 백엔드 | 포트 |
 |--------|--------|------|
-| `api.cp.codingmon.dev` | Kopring (10.1.0.140) | 8080 |
+| `api.cp.codingmon.dev` | API (10.1.0.140) | 8080 |
 | `pgadmin.cp.codingmon.dev` | pgAdmin (10.1.0.110) | 5050 |
 | `grafana.cp.codingmon.dev` | Grafana (10.1.0.120) | 3000 |
 | `jenkins.cp.codingmon.dev` | Jenkins (10.1.0.130) | 8080 |

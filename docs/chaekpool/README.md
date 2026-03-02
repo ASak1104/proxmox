@@ -61,8 +61,8 @@ ansible-playbook site.yml --check --diff
 ```
 1. Traefik (200)     ← 먼저 (리버스 프록시)
 2. Authelia (201)    ← 독립 (SSO/OIDC)
-3. PostgreSQL (210)  ← Kopring 이전
-4. Valkey (211)      ← Kopring 이전
+3. PostgreSQL (210)  ← API 이전
+4. Valkey (211)      ← API 이전
 5. Monitoring (220)  ← 독립
 6. Jenkins (230)     ← 독립
 7. API (240)         ← 마지막 (PostgreSQL + Valkey 필수)

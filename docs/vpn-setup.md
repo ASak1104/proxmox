@@ -263,7 +263,7 @@ ping 10.1.0.110   # PostgreSQL
 ping 10.1.0.111   # Valkey
 ping 10.1.0.120   # Monitoring
 ping 10.1.0.130   # Jenkins
-ping 10.1.0.140   # Kopring
+ping 10.1.0.140   # API
 ```
 
 ### 서비스 직접 접근
