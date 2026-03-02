@@ -8,7 +8,7 @@ OpenTofu + Ansible 기반 Proxmox homelab infrastructure automation. Three layer
 - **core/**: Foundation layer (OPNsense firewall VM with HAProxy for SSL termination and routing)
 - **service/chaekpool/**: Service layer (6 LXC + 1 VM, Alpine 3.23 + Ansible 설정 관리)
   - `terraform/` — 인프라 프로비저닝 (LXC 6개 + Jenkins VM 1개)
-  - `ansible/` — 설정 관리 (6개 서비스 배포 — Kopring 제외)
+  - `ansible/` — 설정 관리 (7개 서비스 배포)
 
 Documentation is in Korean. See `docs/README.md` for reading order.
 For OPNsense HAProxy operations (troubleshooting, adding domains/certs, API automation), see `docs/opnsense-haproxy-operations-guide.md`.
@@ -55,6 +55,7 @@ ansible-playbook site.yml -l cp-postgresql
 ansible-playbook site.yml -l cp-valkey
 ansible-playbook site.yml -l cp-monitoring
 ansible-playbook site.yml -l cp-jenkins
+ansible-playbook site.yml -l cp-api
 
 # 드라이런 (변경 예정 사항 확인)
 ansible-playbook site.yml --check --diff
@@ -116,7 +117,7 @@ Rule: VMID `2GN` → IP `10.1.0.(100 + G×10 + N)`, where G = group (0=LB, 1=Dat
 | 211 | Valkey + Redis Commander | 10.1.0.111 | :6379, :8081 | — |
 | 220 | Monitoring | 10.1.0.120 | :9090, :3000, :3100, :16686 | grafana.cp.codingmon.dev |
 | 230 | Jenkins (VM) | 10.1.0.130 | :8080 | jenkins.cp.codingmon.dev |
-| 240 | Kopring | 10.1.0.140 | :8080 | api.cp.codingmon.dev |
+| 240 | API | 10.1.0.140 | :8080 | api.cp.codingmon.dev |
 
 ## Key Conventions
 
@@ -124,7 +125,7 @@ Rule: VMID `2GN` → IP `10.1.0.(100 + G×10 + N)`, where G = group (0=LB, 1=Dat
 
 역할 분리:
 - **OpenTofu**: 인프라 생성 (VM, LXC, 네트워크). `null_resource`로 SSH+Python 부트스트랩
-- **Ansible**: 설정 관리 (패키지, 설정파일, 서비스, 시크릿). 6개 서비스 역할 + common
+- **Ansible**: 설정 관리 (패키지, 설정파일, 서비스, 시크릿). 7개 서비스 역할 + common
 - **Bash**: `scripts/vpn.sh`만 유지 (로컬 VPN 관리용)
 
 연결 방식: Mac → VPN(10.1.0.x) → SSH 컨테이너 (root, 직접 접속)
@@ -147,7 +148,8 @@ service/chaekpool/ansible/
     ├── postgresql/          # DB + pgAdmin (pgAdmin 서버 자동 등록 포함)
     ├── valkey/              # 캐시 + Redis Commander
     ├── monitoring/          # Prometheus, Grafana, Loki, Jaeger
-    └── jenkins/             # CI/CD
+    ├── jenkins/             # CI/CD
+    └── api/                 # Spring Boot API (Jenkins 파이프라인 배포)
 ```
 
 ### Common Role Tasks
@@ -184,3 +186,29 @@ Vault 비밀번호: `~/.vault_pass` (repo 외부). `ansible.cfg`에서 참조.
 4. Add role to `service/chaekpool/ansible/site.yml`
 5. Add Traefik route in `service/chaekpool/ansible/roles/traefik/templates/services.yml.j2`
 6. Managed Traefik wildcard (`*.cp.codingmon.dev`) auto-forwards — no change needed there
+
+## Important Rules
+
+### 절대 금지 사항
+
+1. **Co-Authored-By 금지** - 커밋 메시지에 공동 작성자/협력자 표기 절대 추가 금지
+2. **비밀 정보 커밋 금지** - API 토큰, 비밀번호, SSH 키, 실제 IP 등 민감정보 커밋 금지 (`.*.env`, `terraform.tfvars`, `vault.yml` 평문)
+3. **추측으로 진행 금지** - "아마 이럴 것 같다"는 금물, 반드시 확인 후 진행
+
+### 필수 준수 사항
+
+1. **한국어 커밋** - Angular Conventional Commits 한국어 (`type(scope): 설명`), scope: `core`/`service`/`docs` 또는 생략
+2. **기존 패턴 준수** - 새 코드는 반드시 기존 코드 패턴과 디렉토리 구조 따름
+3. **BP/레퍼런스 조사 (필수)** - 구현 전 **WebSearch 도구 사용 필수**
+   - 공식 문서 최신 버전 확인 (OpenTofu, bpg/proxmox provider, Ansible module 등)
+   - Best Practice 검색 (예: "Ansible role best practices 2026")
+   - 보안 가이드라인 확인 (방화벽 룰, 시크릿 관리 등)
+   - **구현 후가 아닌 설계 단계에서 조사 수행**
+4. **모호한 사항 즉시 질의 (추측 금지)** - 불확실한 사항은 구현 전 **반드시** 사용자에게 질문
+   - **네이밍**: 리소스명, 변수명, 역할명이 애매할 때
+   - **네트워크**: IP 할당, 서브넷, 방화벽 룰, 라우팅
+   - **시크릿**: 어떤 값을 vault에 넣을지, 환경변수 vs 파일
+   - **인프라 변경**: 기존 리소스 수정/삭제 시 영향 범위
+   - **설정 값**: 기본값, 리소스 크기, 포트 번호 등
+   - **AskUserQuestion 도구 적극 활용**
+5. **CLAUDE.md 동기화** - 작업 중/종료 시 CLAUDE.md와 실제 인프라 간 불일치 발견 시 사용자에게 질문 후 최신 정보로 업데이트

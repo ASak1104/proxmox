@@ -2,11 +2,11 @@
 
 ## 개요
 
-Jenkins CI/CD 서버. WAR 파일로 배포되며 OpenJDK 17에서 실행된다.
+Jenkins CI/CD 서버. WAR 파일로 배포되며 OpenJDK 21에서 실행된다.
 
 - **IP**: 10.1.0.130
 - **포트**: 8080
-- **Jenkins 버전**: 2.541.1
+- **Jenkins 버전**: 2.541.2
 - **접속 URL**: `https://jenkins.cp.codingmon.dev`
 
 ## 배포
@@ -17,16 +17,20 @@ ansible-playbook site.yml -l cp-jenkins
 ```
 
 배포 단계 (6단계):
-1. OpenJDK 17 **전체 버전**, 폰트 패키지 설치, `jenkins` 시스템 사용자 생성
-2. Jenkins WAR v2.541.1 다운로드 → `/opt/jenkins/jenkins.war`
-3. `oic-auth` + `configuration-as-code` 플러그인 사전 설치 (jenkins-plugin-manager)
+1. OpenJDK 21 **전체 버전**, 폰트 패키지 설치, `jenkins` 시스템 사용자 생성
+2. Jenkins WAR v2.541.2 다운로드 → `/opt/jenkins/jenkins.war`
+3. 9개 플러그인 사전 설치 (jenkins-plugin-manager):
+   - `oic-auth`, `configuration-as-code`
+   - `workflow-aggregator`, `docker-workflow`, `git`
+   - `credentials-binding`, `ssh-agent`
+   - `pipeline-stage-view`, `timestamper`
 4. JCasC 설정(`casc.yaml`) 및 Wrapper 스크립트 배포
 5. OIDC 시크릿 주입 (`sed`로 플레이스홀더 치환)
 6. OpenRC 서비스 배포, 시작 및 부팅 시 자동 시작 등록
 
 ### 주요 패키지
 
-- **openjdk17**: 전체 JDK 패키지 (`openjdk17-jre-headless` 불가)
+- **openjdk21**: 전체 JDK 패키지 (`openjdk21-jre-headless` 불가)
   - `jre-headless`는 `fontmanager` 라이브러리가 없어 Jenkins 초기화 실패
   - 전체 패키지는 GUI 라이브러리 포함 (X11, AWT 등)
 - **fontconfig, freetype, ttf-dejavu**: 폰트 렌더링 지원
@@ -39,7 +43,7 @@ ansible-playbook site.yml -l cp-jenkins
 ```sh
 #!/bin/sh
 export JENKINS_HOME="/var/lib/jenkins"
-export JAVA_HOME="/usr/lib/jvm/java-17-openjdk"
+export JAVA_HOME="/usr/lib/jvm/java-21-openjdk"
 export CASC_JENKINS_CONFIG="/var/lib/jenkins/casc.yaml"
 cd "$JENKINS_HOME"
 exec /usr/bin/java -Xmx1024m \
@@ -133,12 +137,12 @@ ssh root@10.1.0.130 "tail -f /var/log/jenkins/jenkins.log"
 - 확인: `ssh root@10.1.0.130 "cat /opt/jenkins/jenkins-wrapper.sh | grep JENKINS_HOME"`
 
 **"no fontmanager in system library path" 오류**
-- 원인: `openjdk17-jre-headless` 사용 (GUI 라이브러리 없음)
-- 해결: `openjdk17` 전체 패키지 설치 필요
-- 확인: `ssh root@10.1.0.130 "apk list --installed | grep openjdk17"`
+- 원인: `openjdk21-jre-headless` 사용 (GUI 라이브러리 없음)
+- 해결: `openjdk21` 전체 패키지 설치 필요
+- 확인: `ssh root@10.1.0.130 "apk list --installed | grep openjdk21"`
 
 **포트 충돌**
-- Kopring(CT 240)도 8080 포트를 사용하지만 서로 다른 컨테이너이므로 충돌 없음
+- API(CT 240)도 8080 포트를 사용하지만 서로 다른 컨테이너이므로 충돌 없음
 
 **플러그인 설치 실패**
 - 인터넷 연결 확인: `ssh root@10.1.0.130 "wget -q -O /dev/null https://updates.jenkins.io/"`
@@ -152,3 +156,21 @@ ssh root@10.1.0.130 "tail -f /var/log/jenkins/jenkins.log"
 | `service/chaekpool/ansible/roles/jenkins/templates/casc.yaml.j2` | JCasC OIDC 설정 |
 | `service/chaekpool/ansible/roles/jenkins/templates/jenkins.openrc.j2` | OpenRC 서비스 파일 |
 | `service/chaekpool/ansible/roles/jenkins/templates/jenkins-wrapper.sh.j2` | 환경 변수 설정 wrapper |
+
+## Pipeline & Docker Agent
+
+Jenkins는 Docker Pipeline 플러그인을 통해 컨테이너 기반 빌드를 지원한다.
+
+### 구성 요소
+
+- **Docker**: Jenkins VM에 설치된 Docker (Testcontainers + Docker Pipeline)
+- **`numExecutors: 2`**: Docker Pipeline이 controller executor를 사용하므로 0이면 작업 실행 불가
+- **Gradle 캐시 볼륨**: `docker volume create gradle-cache` — 빌드 간 의존성 캐시 유지
+- **Deploy SSH Key**: JCasC `basicSSHUserPrivateKey` credential (id: `api-deploy-ssh`)
+
+### 파이프라인 동작
+
+1. Docker 컨테이너(`gradle:jdk25-alpine`)에서 빌드/테스트 수행
+2. Gradle 캐시는 Docker 볼륨(`gradle-cache`)으로 마운트
+3. Deploy 단계에서 SSH로 API 서버(CT 240)에 JAR 배포
+4. 상세 내용: [jenkins-pipeline.md](jenkins-pipeline.md)

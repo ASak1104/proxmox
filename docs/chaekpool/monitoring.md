@@ -52,7 +52,7 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
-  - job_name: "kopring-actuator"
+  - job_name: "api-actuator"
     metrics_path: "/actuator/prometheus"
     static_configs:
       - targets: ["10.1.0.140:8080"]
@@ -67,7 +67,7 @@ scrape_configs:
 ```
 
 - 15초 간격으로 스크레이핑
-- Kopring의 Spring Boot Actuator (`/actuator/prometheus`) 메트릭 수집
+- API의 Spring Boot Actuator (`/actuator/prometheus`) 메트릭 수집
 - 로컬 Loki, Grafana 자체 메트릭 수집
 
 ### Grafana (`/etc/grafana/grafana.ini`)
@@ -244,7 +244,7 @@ ssh root@10.1.0.120 "tail -f /var/log/jaeger.log"
 **Prometheus 타겟 DOWN**
 - 타겟 서비스가 실행 중인지 확인
 - Prometheus UI > Status > Targets에서 에러 메시지 확인
-- 네트워크 연결 확인 (특히 Kopring `10.1.0.140:8080`)
+- 네트워크 연결 확인 (특히 API `10.1.0.140:8080`)
 
 **Grafana 데이터소스 연결 실패**
 - Grafana UI > Configuration > Data Sources에서 테스트

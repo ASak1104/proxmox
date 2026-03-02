@@ -216,24 +216,24 @@ pct exec 230 -- rc-service jenkins status
 
 ---
 
-## CT 240 — Kopring
+## CT 240 — API
 
 | 로그 | 경로 | 설명 |
 |------|------|------|
-| 애플리케이션 로그 | `/var/log/kopring/kopring.log` | Spring Boot 요청, 에러, SQL 로그 |
+| 애플리케이션 로그 | `/var/log/api/api.log` | Spring Boot 요청, 에러, SQL 로그 |
 
 ```bash
 # 실시간 로그
-pct exec 240 -- tail -f /var/log/kopring/kopring.log
+pct exec 240 -- tail -f /var/log/api/api.log
 
 # 에러만 필터
-pct exec 240 -- grep -i "error\|exception" /var/log/kopring/kopring.log | tail -20
+pct exec 240 -- grep -i "error\|exception" /var/log/api/api.log | tail -20
 
 # 액추에이터 헬스
 pct exec 240 -- wget -qO- http://localhost:8080/actuator/health
 
 # 서비스 상태
-pct exec 240 -- rc-service kopring status
+pct exec 240 -- rc-service api status
 ```
 
 ---

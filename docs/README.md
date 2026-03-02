@@ -48,7 +48,7 @@ proxmox/
                                     [CP Traefik (CT 200)] ── HTTP 라우팅
                                        │
                                        ├── authelia.cp.codingmon.dev  → Authelia (10.1.0.101:9091)
-                                       ├── api.cp.codingmon.dev       → Kopring (10.1.0.140:8080)
+                                       ├── api.cp.codingmon.dev       → API (10.1.0.140:8080)
                                        ├── pgadmin.cp.codingmon.dev   → pgAdmin (10.1.0.110:5050)
                                        ├── grafana.cp.codingmon.dev   → Grafana (10.1.0.120:3000)
                                        └── jenkins.cp.codingmon.dev   → Jenkins (10.1.0.130:8080)
@@ -65,7 +65,7 @@ proxmox/
 | 211 | cp-valkey | 10.1.0.111 | Valkey + Redis Commander |
 | 220 | cp-monitoring | 10.1.0.120 | Prometheus/Grafana/Loki/Jaeger |
 | 230 | cp-jenkins | 10.1.0.130 | Jenkins CI/CD |
-| 240 | cp-kopring | 10.1.0.140 | Kopring Spring Boot |
+| 240 | cp-api | 10.1.0.140 | API (Spring Boot) |
 
 ## 문서 읽기 순서
 

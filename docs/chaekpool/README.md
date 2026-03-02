@@ -14,7 +14,7 @@ Chaekpool 프로젝트의 서비스 계층. 6개의 Alpine 3.23 LXC 컨테이너
 | 211 | cp-valkey | 10.1.0.111 | 1 | 1GB | 10GB | Valkey + Redis Commander |
 | 220 | cp-monitoring | 10.1.0.120 | 4 | 4GB | 30GB | Prometheus/Grafana/Loki/Jaeger |
 | 230 | cp-jenkins | 10.1.0.130 | 2 | 2GB | 20GB | Jenkins CI/CD |
-| 240 | cp-kopring | 10.1.0.140 | 2 | 2GB | 10GB | Kopring Spring Boot |
+| 240 | cp-api | 10.1.0.140 | 2 | 2GB | 10GB | API (Spring Boot) |
 
 ## OpenTofu 적용
 
@@ -65,14 +65,14 @@ ansible-playbook site.yml --check --diff
 4. Valkey (211)      ← Kopring 이전
 5. Monitoring (220)  ← 독립
 6. Jenkins (230)     ← 독립
-7. Kopring (240)     ← 마지막 (PostgreSQL + Valkey 필수)
+7. API (240)         ← 마지막 (PostgreSQL + Valkey 필수)
 ```
 
 - **Traefik**을 먼저 배포해야 다른 서비스에 도메인으로 접근 가능
 - **Authelia**는 Traefik과 독립적으로 배포 가능 (ForwardAuth/OIDC 사용 서비스보다 먼저 배포)
-- **PostgreSQL**과 **Valkey**는 Kopring보다 먼저 배포해야 함
+- **PostgreSQL**과 **Valkey**는 API보다 먼저 배포해야 함
 - **Monitoring**과 **Jenkins**는 독립적으로 언제든 배포 가능
-- **Kopring**은 PostgreSQL과 Valkey가 실행 중이어야 정상 기동
+- **API**는 PostgreSQL과 Valkey가 실행 중이어야 정상 기동
 
 ## 서비스 관리 (OpenRC)
 
@@ -144,7 +144,8 @@ ssh root@<IP> "cat /etc/resolv.conf"
 | Valkey + Redis Commander (CT 211) | [valkey.md](valkey.md) |
 | Monitoring Stack (CT 220) | [monitoring.md](monitoring.md) |
 | Jenkins (CT 230) | [jenkins.md](jenkins.md) |
-| Kopring (CT 240) | [kopring.md](kopring.md) |
+| API (CT 240) | [api.md](api.md) |
+| Jenkins Pipeline | [jenkins-pipeline.md](jenkins-pipeline.md) |
 
 ## 참조 파일
 
