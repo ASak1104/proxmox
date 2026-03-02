@@ -9,7 +9,7 @@ ip_postgresql: "10.1.0.110"
 ip_valkey: "10.1.0.111"
 ip_monitoring: "10.1.0.120"
 ip_jenkins: "10.1.0.130"
-ip_kopring: "10.1.0.140"
+ip_api: "10.1.0.140"
 
 # Service Ports
 port_traefik: 80
@@ -25,7 +25,7 @@ port_jaeger_ui: 16686
 port_jaeger_otlp_grpc: 4317
 port_jaeger_otlp_http: 4318
 port_jenkins: 8080
-port_kopring: 8080
+port_api: 8080
 
 # Software Versions
 traefik_version: "3.6.7"

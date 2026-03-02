@@ -7,11 +7,11 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:{{ port_prometheus }}"]
 
-  - job_name: "kopring-actuator"
+  - job_name: "api-actuator"
     metrics_path: "/actuator/prometheus"
     static_configs:
       - targets:
-          - "{{ ip_kopring }}:{{ port_kopring }}"
+          - "{{ ip_api }}:{{ port_api }}"
 
   - job_name: "loki"
     static_configs:

@@ -1,8 +1,8 @@
 ---
 # Chaekpool 전체 배포 플레이북
-# deploy-all.sh의 2-wave 병렬 구조 유지:
+# 2-wave 병렬 구조:
 #   Wave 1: 독립 서비스 (Traefik, Authelia, PostgreSQL, Valkey, Monitoring, Jenkins)
-#   Wave 2: 의존 서비스 (현재 없음 — Kopring 제외)
+#   Wave 2: 의존 서비스 (API — PostgreSQL + Valkey 필수)
 #
 # 사용법:
 #   전체 배포:   ansible-playbook site.yml
@@ -26,3 +26,10 @@
       when: inventory_hostname == 'cp-monitoring'
     - role: jenkins
       when: inventory_hostname == 'cp-jenkins'
+
+- name: "Wave 2: Application services"
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: api
+      when: inventory_hostname == 'cp-api'

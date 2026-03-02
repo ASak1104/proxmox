@@ -56,7 +56,6 @@
     url: "https://github.com/jenkinsci/plugin-installation-manager-tool/releases/download/{{ jenkins_plugin_manager_version }}/jenkins-plugin-manager-{{ jenkins_plugin_manager_version }}.jar"
     dest: /tmp/jenkins-plugin-manager.jar
     mode: "0644"
-  when: _jenkins_war.changed
 
 - name: Install plugins
   ansible.builtin.command:
@@ -65,8 +64,11 @@
       -w {{ jenkins_opt }}/jenkins.war
       -d {{ jenkins_home }}/plugins
       -p oic-auth configuration-as-code
-  when: _jenkins_war.changed
+      workflow-aggregator docker-workflow git
+      credentials-binding ssh-agent
+      pipeline-stage-view timestamper
   changed_when: true
+  notify: restart jenkins
 
 - name: Set plugin directory ownership
   ansible.builtin.file:
@@ -75,13 +77,11 @@
     owner: jenkins
     group: jenkins
     recurse: true
-  when: _jenkins_war.changed
 
 - name: Clean up plugin manager
   ansible.builtin.file:
     path: /tmp/jenkins-plugin-manager.jar
     state: absent
-  when: _jenkins_war.changed
 
 - name: Deploy JCasC config
   ansible.builtin.template:
@@ -108,3 +108,9 @@
   vars:
     openrc_name: jenkins
     openrc_src: jenkins.openrc
+
+# --- Gradle cache for Docker Pipeline ---
+- name: Create Gradle cache Docker volume
+  ansible.builtin.command:
+    cmd: docker volume create gradle-cache
+  changed_when: false

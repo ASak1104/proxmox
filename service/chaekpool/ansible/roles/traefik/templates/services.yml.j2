@@ -8,9 +8,9 @@ http:
         - web
 
     # --- App (bypass — 자체 인증) ---
-    kopring:
+    api:
       rule: "Host(`api.{{ base_domain }}`)"
-      service: kopring
+      service: api
       entryPoints:
         - web
 
@@ -39,10 +39,10 @@ http:
           - url: "http://{{ ip_authelia }}:{{ port_authelia }}"
 
     # --- App ---
-    kopring:
+    api:
       loadBalancer:
         servers:
-          - url: "http://{{ ip_kopring }}:{{ port_kopring }}"
+          - url: "http://{{ ip_api }}:{{ port_api }}"
 
     # --- Data 관리 UI ---
     pgadmin:

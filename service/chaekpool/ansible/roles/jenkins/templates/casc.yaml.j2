@@ -1,5 +1,5 @@
 jenkins:
-  numExecutors: 0
+  numExecutors: 2
   securityRealm:
     oic:
       clientId: "jenkins"
@@ -18,6 +18,60 @@ jenkins:
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
+  views:
+    - list:
+        name: "dev"
+        includeRegex: ".*"
+        columns:
+          - status
+          - weather
+          - jobName
+          - lastSuccess
+          - lastFailure
+          - lastDuration
+          - buildButton
+
+{% set api_env_content %}
+SPRING_PROFILES_ACTIVE=dev
+SERVER_PORT={{ port_api }}
+POSTGRES_HOST={{ ip_postgresql }}
+POSTGRES_PORT={{ port_postgresql }}
+POSTGRES_DB={{ pg_db }}
+POSTGRES_USER={{ pg_user }}
+POSTGRES_PASSWORD={{ vault_pg_password }}
+CACHE_HOST={{ ip_valkey }}
+CACHE_PORT={{ port_valkey }}
+CACHE_PASSWORD={{ vault_valkey_password }}
+JWT_SECRET={{ vault_api_jwt_secret }}
+JWT_ACCESS_TOKEN_VALIDITY_SECONDS=900
+JWT_REFRESH_TOKEN_VALIDITY_SECONDS=604800
+CRYPTO_SECRET_KEY={{ vault_api_crypto_secret_key }}
+KAKAO_CLIENT_ID={{ vault_api_kakao_client_id }}
+KAKAO_CLIENT_SECRET={{ vault_api_kakao_client_secret }}
+KAKAO_REDIRECT_URI=https://api.{{ base_domain }}/oauth2/callback/kakao
+CORS_ALLOWED_ORIGINS=https://api.{{ base_domain }}
+LOKI_URL=http://{{ ip_monitoring }}:{{ port_loki }}
+OTLP_ENDPOINT=http://{{ ip_monitoring }}:{{ port_jaeger_otlp_http }}
+{% endset %}
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - basicSSHUserPrivateKey:
+              scope: GLOBAL
+              id: "api-deploy-ssh"
+              username: "root"
+              description: "API deploy SSH key (CT 240)"
+              privateKeySource:
+                directEntry:
+                  privateKey: "{{ vault_jenkins_deploy_private_key }}"
+          - file:
+              scope: GLOBAL
+              id: "api-env-file"
+              fileName: ".env"
+              secretBytes: "{{ api_env_content | b64encode }}"
+              description: "API environment variables (CT 240)"
 
 unclassified:
   location:
