@@ -73,6 +73,25 @@ credentials:
               secretBytes: "{{ api_env_content | b64encode }}"
               description: "API environment variables (CT 240)"
 
+jobs:
+  - script: >
+      pipelineJob('chaekpool-api') {
+        description('Chaekpool API - Build, Test, Deploy')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/PrintPoisoning/chaekpool-api.git')
+                }
+                branches('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+          }
+        }
+      }
+
 unclassified:
   location:
     url: "https://jenkins.{{ base_domain }}/"

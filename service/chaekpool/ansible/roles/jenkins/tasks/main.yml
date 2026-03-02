@@ -67,6 +67,7 @@
       workflow-aggregator docker-workflow git
       credentials-binding ssh-agent
       pipeline-stage-view timestamper
+      job-dsl
   changed_when: true
   notify: restart jenkins
 
