@@ -19,6 +19,7 @@
       - "{{ api_opt }}"
       - "{{ api_log_dir }}"
       - "{{ api_config_dir }}"
+      - /logs
 
 # --- Jenkins deploy SSH key ---
 - name: Ensure root .ssh directory exists
