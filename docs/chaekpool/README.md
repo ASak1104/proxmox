@@ -9,11 +9,11 @@ Chaekpool 프로젝트의 서비스 계층. 6개의 Alpine 3.23 LXC 컨테이너
 | VMID | 호스트명 | IP | 코어 | 메모리 | 디스크 | 역할 |
 |------|---------|-----|------|--------|--------|------|
 | 200 | cp-traefik | 10.1.0.100 | 1 | 512MB | 5GB | HTTP 리버스 프록시 |
-| 201 | cp-authelia | 10.1.0.101 | 1 | 512MB | 5GB | SSO/OIDC (Authelia) |
+| 201 | cp-authelia | 10.1.0.101 | 1 | 256MB | 2GB | SSO/OIDC (Authelia) |
 | 210 | cp-postgresql | 10.1.0.110 | 2 | 2GB | 20GB | PostgreSQL + pgAdmin |
 | 211 | cp-valkey | 10.1.0.111 | 1 | 1GB | 10GB | Valkey + Redis Commander |
 | 220 | cp-monitoring | 10.1.0.120 | 4 | 4GB | 30GB | Prometheus/Grafana/Loki/Jaeger |
-| 230 | cp-jenkins | 10.1.0.130 | 2 | 2GB | 20GB | Jenkins CI/CD |
+| 230 | cp-jenkins | 10.1.0.130 | 2 | 4GB | 30GB | Jenkins CI/CD |
 | 240 | cp-api | 10.1.0.140 | 2 | 2GB | 10GB | API (Spring Boot) |
 
 ## OpenTofu 적용
@@ -51,6 +51,7 @@ ansible-playbook site.yml -l cp-postgresql
 ansible-playbook site.yml -l cp-valkey
 ansible-playbook site.yml -l cp-monitoring
 ansible-playbook site.yml -l cp-jenkins
+ansible-playbook site.yml -l cp-api
 
 # 드라이런
 ansible-playbook site.yml --check --diff

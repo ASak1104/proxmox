@@ -29,6 +29,22 @@ pct exec 200 -- rc-service traefik status
 
 ---
 
+## CT 201 — Authelia
+
+| 로그 | 경로 | 설명 |
+|------|------|------|
+| 서비스 로그 | `/var/log/authelia/authelia.log` | 인증 요청, OIDC, 에러 로그 |
+
+```bash
+# 실시간 로그
+pct exec 201 -- tail -f /var/log/authelia/authelia.log
+
+# 서비스 상태
+pct exec 201 -- rc-service authelia status
+```
+
+---
+
 ## CT 210 — PostgreSQL + pgAdmin
 
 ### PostgreSQL
