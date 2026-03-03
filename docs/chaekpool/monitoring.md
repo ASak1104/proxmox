@@ -121,18 +121,21 @@ role_attribute_path = contains(groups[*], 'admins') && 'Admin' || 'Viewer'
 - OIDC 클라이언트 시크릿은 `vault.yml`의 `vault_authelia_oidc_grafana_secret` (평문, Authelia 측은 PBKDF2 해시)
 - 소스: `roles/monitoring/templates/grafana.ini.j2`
 
-### Grafana 데이터소스 (`/etc/grafana/provisioning/datasources/datasources.yml`)
+### Grafana 데이터소스 (`/opt/grafana/conf/provisioning/datasources/datasources.yml`)
 
 3개 데이터소스가 자동 프로비저닝된다:
-- **Prometheus** (`http://localhost:9090`) - 기본 데이터소스
-- **Loki** (`http://localhost:3100`)
-- **Jaeger** (`http://localhost:16686`)
+- **Prometheus** (`http://localhost:9090`) - 기본 데이터소스, exemplar → Jaeger 연동
+- **Loki** (`http://localhost:3100`) - derived field로 traceId(structured metadata) → Jaeger 연동
+- **Jaeger** (`http://localhost:16686`) - tracesToLogsV2로 trace → Loki 로그 연동
+
+> **주의**: Grafana는 `grafana.ini`의 `[paths] provisioning` 설정을 무시하고 `--homepath` 기준 기본 경로(`/opt/grafana/conf/provisioning`)를 사용한다. Ansible은 이 기본 경로에 직접 배포한다.
 
 ### Loki (`/etc/loki/loki.yml`)
 
 - HTTP 포트: 3100
 - 스토리지: TSDB + 로컬 파일시스템
 - 보관 기간: 30일 (`retention_period: 30d`)
+- Structured Metadata: 활성화 (`allow_structured_metadata: true`) — loki4j에서 traceId/spanId 수신
 - 자동 압축: 10분 간격
 - 데이터: `/var/lib/loki/`
 
@@ -276,6 +279,6 @@ ssh root@10.1.0.120 "tail -f /var/log/jaeger.log"
 | `service/chaekpool/ansible/roles/monitoring/` | Ansible 역할 |
 | `service/chaekpool/ansible/roles/monitoring/templates/prometheus.yml.j2` | Prometheus 설정 |
 | `service/chaekpool/ansible/roles/monitoring/templates/grafana.ini.j2` | Grafana 설정 |
-| `service/chaekpool/ansible/roles/monitoring/templates/datasources.yml.j2` | Grafana 데이터소스 |
-| `service/chaekpool/ansible/roles/monitoring/templates/loki.yml.j2` | Loki 설정 |
+| `service/chaekpool/ansible/roles/monitoring/files/datasources.yml` | Grafana 데이터소스 |
+| `service/chaekpool/ansible/roles/monitoring/files/loki.yml` | Loki 설정 |
 | `service/chaekpool/ansible/roles/monitoring/templates/jaeger.yml.j2` | Jaeger 설정 |

@@ -9,8 +9,8 @@
     svc_dirs:
       - "{{ grafana_home }}"
       - "{{ grafana_config_dir }}"
-      - "{{ grafana_config_dir }}/provisioning/datasources"
-      - "{{ grafana_config_dir }}/provisioning/dashboards/json"
+      - "{{ grafana_home }}/conf/provisioning/datasources"
+      - "{{ grafana_home }}/conf/provisioning/dashboards/json"
       - "{{ grafana_data_dir }}"
       - "{{ grafana_log_dir }}"
 
@@ -82,7 +82,7 @@
 - name: Deploy datasources provisioning
   ansible.builtin.copy:
     src: datasources.yml
-    dest: "{{ grafana_config_dir }}/provisioning/datasources/datasources.yml"
+    dest: "{{ grafana_home }}/conf/provisioning/datasources/datasources.yml"
     owner: grafana
     group: grafana
     mode: "0644"
@@ -91,7 +91,7 @@
 - name: Deploy dashboards provisioning
   ansible.builtin.copy:
     src: dashboards.yml
-    dest: "{{ grafana_config_dir }}/provisioning/dashboards/dashboards.yml"
+    dest: "{{ grafana_home }}/conf/provisioning/dashboards/dashboards.yml"
     owner: grafana
     group: grafana
     mode: "0644"
@@ -100,7 +100,7 @@
 - name: Deploy dashboard JSON files
   ansible.builtin.copy:
     src: dashboards/chaekpool-api-overview.json
-    dest: "{{ grafana_config_dir }}/provisioning/dashboards/json/chaekpool-api-overview.json"
+    dest: "{{ grafana_home }}/conf/provisioning/dashboards/json/chaekpool-api-overview.json"
     owner: grafana
     group: grafana
     mode: "0644"

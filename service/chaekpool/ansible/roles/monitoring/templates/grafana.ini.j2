@@ -10,7 +10,7 @@ admin_password = {{ vault_grafana_admin_password }}
 data = {{ grafana_data_dir }}
 logs = {{ grafana_log_dir }}
 plugins = {{ grafana_data_dir }}/plugins
-provisioning = {{ grafana_config_dir }}/provisioning
+provisioning = {{ grafana_home }}/conf/provisioning
 
 [users]
 allow_sign_up = true
