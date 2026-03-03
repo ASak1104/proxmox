@@ -28,7 +28,7 @@ datasources:
     jsonData:
       derivedFields:
         - name: TraceID
-          matcherRegex: "traceId=(\\w+)"
+          matcherRegex: traceId
           url: "$${__value.raw}"
           datasourceUid: jaeger
           matcherType: label
