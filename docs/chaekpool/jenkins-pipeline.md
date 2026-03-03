@@ -18,17 +18,17 @@
 ## 파이프라인 스테이지
 
 ### 1. Build
-- `./gradlew clean build -x test --no-daemon`
+- `.gradle` → `/root/.gradle/chaekpool-api` 심볼릭 링크 (Gradle 캐시 + Configuration Cache 보존)
+- `./gradlew assemble --no-daemon`
 - Fat JAR 생성 (`build/libs/chaekpool-*.jar`)
 
 ### 2. Test
-- `./gradlew test --no-daemon`
+- `./gradlew cleanTest test --no-daemon`
 - JUnit 결과 수집 (`**/build/test-results/test/*.xml`)
 - Testcontainers: Docker socket 마운트 (`/var/run/docker.sock`)
 
-### 3. Deploy (main 브랜치만)
-- `when { branch 'main' }` 조건
-- `withCredentials([file(...)])`: `api-env-file` credential → 임시 파일 경로를 `API_ENV_FILE` 환경변수로 전달
+### 3. Deploy
+- `withCredentials([file(...)])`: `api-env` credential → 임시 파일 경로를 `API_ENV_FILE` 환경변수로 전달
 - `ci/deploy.sh` 스크립트 실행:
   1. `build/libs/chaekpool-*.jar` → SCP → `/opt/api/api.jar.new`
   2. `$API_ENV_FILE` → SCP → `/etc/api/.env` (권한 0600, api:api)
@@ -36,7 +36,7 @@
   4. 기존 JAR 백업 (`.bak`)
   5. Atomic swap (`mv .new → .jar`)
   6. `rc-service api start`
-  7. 헬스체크 (30회, 2초 간격, `/actuator/health`)
+  7. 헬스체크 (10회, 6초 간격, `/actuator/health`)
   8. 실패 시 자동 롤백
 
 ## 사전 준비
@@ -95,12 +95,12 @@ Jenkins UI (`https://jenkins.cp.codingmon.dev`)에서:
 |--------|-----------|------|
 | `vault_jenkins_deploy_private_key` | vault.yml → JCasC | Jenkins → API SSH 배포 |
 | `vault_jenkins_deploy_public_key` | vault.yml → authorized_keys | API 서버 SSH 접근 허용 |
-| `api-env-file` | vault.yml → JCasC → Jenkins Secret file | API 환경변수 (.env 전체) |
+| `api-env` | vault.yml → JCasC → Jenkins Secret file | API 환경변수 (.env 전체) |
 
 ### 시크릿 흐름
 
 ```
-vault.yml → Ansible → casc.yaml → Jenkins Secret file credential (api-env-file)
+vault.yml → Ansible → casc.yaml → Jenkins Secret file credential (api-env)
                                         │
                                         ▼
                               Jenkins Pipeline (withCredentials)
@@ -111,7 +111,7 @@ vault.yml → Ansible → casc.yaml → Jenkins Secret file credential (api-env-
 
 ### 환경변수 변경 방법
 
-1. Jenkins UI → Manage Jenkins → Credentials → `api-env-file` → Update
+1. Jenkins UI → Manage Jenkins → Credentials → `api-env` → Update
 2. `.env` 파일 내용 수정 후 저장
 3. chaekpool-api 파이프라인 재실행 → 변경된 `.env`가 서버에 배포됨
 
