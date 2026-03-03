@@ -8,6 +8,7 @@ export CASC_JENKINS_CONFIG="{{ jenkins_home }}/casc.yaml"
 cd "$JENKINS_HOME"
 exec /usr/bin/java -Xmx1024m \
     -Djava.awt.headless=true \
+    -Duser.timezone=Asia/Seoul \
     -Djenkins.install.runSetupWizard=false \
     -Djenkins.security.csp.CspHeader.headerName=Content-Security-Policy \
     -jar {{ jenkins_opt }}/jenkins.war --httpPort={{ port_jenkins }}
