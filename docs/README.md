@@ -2,8 +2,6 @@
 
 OpenTofu + Ansible 기반 Proxmox 홈랩 인프라 자동화 프로젝트.
 
-**업데이트**: 2026-02-10 - OPNsense HAProxy 2-tier 아키텍처로 변경
-
 ## 프로젝트 구조
 
 ```
@@ -20,7 +18,7 @@ proxmox/
 │           ├── site.yml            # 전체 배포 오케스트레이션
 │           ├── inventory/          # 정적 인벤토리
 │           ├── group_vars/         # 공통 변수 + vault 시크릿
-│           └── roles/              # common, traefik, authelia, postgresql, valkey, monitoring, jenkins
+│           └── roles/              # common, traefik, authelia, postgresql, valkey, monitoring, jenkins, api
 └── docs/                           # 문서
 ```
 
@@ -78,27 +76,3 @@ proxmox/
 6. **[네트워크 아키텍처](network-architecture.md)** - 네트워크 구성 레퍼런스
 7. **[네트워크 설정 가이드](network-setup.md)** - 도메인, 인증서, 정책 라우팅, 트러블슈팅
 8. **[로깅 가이드](logging-guide.md)** - 로그 확인 및 관리
-
-## 주요 변경 사항 (2026-02-10)
-
-### Before (3-Tier)
-```
-Internet → NAT Router → Mgmt Traefik (CT 103) → CP Traefik (CT 200) → Services
-```
-
-### After (2-Tier)
-```
-Internet → NAT Router → OPNsense HAProxy (VM 102) → {Infrastructure, CP Traefik} → Services
-```
-
-### 장점
-- ✅ **중앙 집중식 보안 관리**: 모든 외부 트래픽이 OPNsense 방화벽 통과
-- ✅ **리소스 절약**: CT 103 제거 (CPU 2, RAM 1GB, Disk 10GB)
-- ✅ **아키텍처 단순화**: 3-tier → 2-tier
-- ✅ **보안 강화**: HAProxy WAF, Rate limiting, IP Geo-blocking 활용 가능
-- ✅ **관심사 분리**: 인프라 (OPNsense) vs 서비스 (CP Traefik)
-
-### 주의 사항
-- ⚠️ OPNsense 부하 증가 (모든 HTTPS 트래픽 SSL 종료)
-- ⚠️ 단일 장애점 (OPNsense 다운 시 모든 외부 접속 불가)
-- ⚠️ OPNsense 메모리 증설 필요 (2GB → 4GB)

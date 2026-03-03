@@ -72,12 +72,6 @@ API를 통한 인증서 관리는 [운영 가이드](opnsense-haproxy-operations
 > **주의**: Let's Encrypt에는 [Rate Limit](https://letsencrypt.org/docs/rate-limits/)이 있다.
 > 동일 도메인 조합에 대해 주당 5회까지 발급 가능. 테스트 시 주의.
 
-## 정책 라우팅
-
-> **해결됨**: 구 아키텍처(CT 103)에서는 LXC 컨테이너가 3개 네트워크에 연결되어 비대칭 라우팅 문제가 있었다.
-> 현재 아키텍처에서는 OPNsense VM이 직접 외부 트래픽을 수신하므로 이 문제가 발생하지 않는다.
-> OPNsense는 WAN(<OPNSENSE_WAN_IP>)으로 들어온 트래픽의 응답을 동일한 인터페이스로 반환한다.
-
 ## NAT Router 포트포워딩
 
 NAT Router에서 다음 포트포워딩이 필수:
