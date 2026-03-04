@@ -112,7 +112,10 @@
     openrc_src: jenkins.openrc
 
 # --- Gradle cache for Docker Pipeline ---
-- name: Create Gradle cache Docker volume
-  ansible.builtin.command:
-    cmd: docker volume create gradle-cache
-  changed_when: false
+- name: Create Gradle cache directory
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}/.gradle"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
