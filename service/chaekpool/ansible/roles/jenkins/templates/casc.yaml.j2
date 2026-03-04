@@ -1,5 +1,19 @@
 jenkins:
-  numExecutors: 2
+  numExecutors: 0
+  nodes:
+    - permanent:
+        name: "docker-agent"
+        numExecutors: 2
+        remoteFS: "/var/lib/jenkins-agent"
+        labelString: "docker linux"
+        mode: NORMAL
+        retentionStrategy: "always"
+        launcher:
+          ssh:
+            host: "127.0.0.1"
+            port: 22
+            credentialsId: "jenkins-agent-ssh"
+            sshHostKeyVerificationStrategy: "nonVerifyingKeyVerificationStrategy"
   securityRealm:
     oic:
       clientId: "jenkins"
@@ -66,6 +80,14 @@ credentials:
               privateKeySource:
                 directEntry:
                   privateKey: {{ vault_jenkins_deploy_private_key | to_json }}
+          - basicSSHUserPrivateKey:
+              scope: GLOBAL
+              id: "jenkins-agent-ssh"
+              username: "jenkins-agent"
+              description: "Jenkins agent SSH key (localhost)"
+              privateKeySource:
+                directEntry:
+                  privateKey: {{ (_jenkins_agent_privkey.content | b64decode) | to_json }}
           - file:
               scope: GLOBAL
               id: "api-env"

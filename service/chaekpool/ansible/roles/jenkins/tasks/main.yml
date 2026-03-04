@@ -43,6 +43,21 @@
     append: true
   notify: restart jenkins
 
+- name: Record desired Jenkins version
+  ansible.builtin.copy:
+    content: "{{ jenkins_version }}"
+    dest: "{{ jenkins_opt }}/.version"
+    owner: jenkins
+    group: jenkins
+    mode: "0644"
+  register: _jenkins_version_changed
+
+- name: Remove old Jenkins WAR on version change
+  ansible.builtin.file:
+    path: "{{ jenkins_opt }}/jenkins.war"
+    state: absent
+  when: _jenkins_version_changed is changed
+
 - name: Download Jenkins WAR
   ansible.builtin.get_url:
     url: "https://get.jenkins.io/war-stable/{{ jenkins_version }}/jenkins.war"
@@ -50,7 +65,7 @@
     owner: jenkins
     group: jenkins
     mode: "0644"
-  register: _jenkins_war
+  notify: restart jenkins
 
 - name: Download plugin manager
   ansible.builtin.get_url:
@@ -68,7 +83,7 @@
       workflow-aggregator docker-workflow git
       credentials-binding ssh-agent
       pipeline-stage-view timestamper
-      job-dsl junit ws-cleanup
+      job-dsl junit ws-cleanup ssh-slaves
   changed_when: true
   notify: restart jenkins
 
@@ -84,15 +99,6 @@
   ansible.builtin.file:
     path: /tmp/jenkins-plugin-manager.jar
     state: absent
-
-- name: Deploy JCasC config
-  ansible.builtin.template:
-    src: casc.yaml.j2
-    dest: "{{ jenkins_home }}/casc.yaml"
-    owner: jenkins
-    group: jenkins
-    mode: "0600"
-  notify: restart jenkins
 
 - name: Deploy jenkins wrapper script
   ansible.builtin.template:
@@ -119,3 +125,62 @@
     owner: root
     group: root
     mode: "0755"
+
+# --- Jenkins Agent (SSH localhost) ---
+- name: Create jenkins-agent group
+  ansible.builtin.group:
+    name: jenkins-agent
+    system: true
+
+- name: Create jenkins-agent user
+  ansible.builtin.user:
+    name: jenkins-agent
+    group: jenkins-agent
+    groups: docker
+    system: true
+    create_home: true
+    home: /var/lib/jenkins-agent
+    shell: /bin/ash
+    password: "*"
+
+- name: Generate SSH keypair for jenkins agent
+  ansible.builtin.user:
+    name: jenkins
+    generate_ssh_key: true
+    ssh_key_type: ed25519
+    ssh_key_comment: "jenkins-agent@localhost"
+
+- name: Read jenkins public key
+  ansible.builtin.slurp:
+    src: "{{ jenkins_home }}/.ssh/id_ed25519.pub"
+  register: _jenkins_agent_pubkey
+
+- name: Create jenkins-agent .ssh directory
+  ansible.builtin.file:
+    path: /var/lib/jenkins-agent/.ssh
+    state: directory
+    owner: jenkins-agent
+    group: jenkins-agent
+    mode: "0700"
+
+- name: Authorize jenkins key for jenkins-agent user
+  ansible.builtin.copy:
+    content: "{{ _jenkins_agent_pubkey.content | b64decode }}"
+    dest: /var/lib/jenkins-agent/.ssh/authorized_keys
+    owner: jenkins-agent
+    group: jenkins-agent
+    mode: "0600"
+
+- name: Read jenkins private key for JCasC credential
+  ansible.builtin.slurp:
+    src: "{{ jenkins_home }}/.ssh/id_ed25519"
+  register: _jenkins_agent_privkey
+
+- name: Deploy JCasC config
+  ansible.builtin.template:
+    src: casc.yaml.j2
+    dest: "{{ jenkins_home }}/casc.yaml"
+    owner: jenkins
+    group: jenkins
+    mode: "0600"
+  notify: restart jenkins
