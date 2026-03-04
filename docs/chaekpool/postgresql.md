@@ -2,7 +2,7 @@
 
 ## 개요
 
-PostgreSQL 16 데이터베이스 서버와 pgAdmin 4 웹 관리 도구.
+PostgreSQL 18 데이터베이스 서버와 pgAdmin 4 웹 관리 도구.
 
 - **IP**: 10.1.0.110
 - **포트**: 5432 (PostgreSQL), 5050 (pgAdmin)

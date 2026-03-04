@@ -107,9 +107,11 @@ HTTPS:
 
 OPNsense 웹 UI:
 1. **Services → ACME Client → Certificates**
-2. `codingmon-multi-san` 인증서 선택
+2. 2개 인증서 각각 발급:
+   - `infra-multi-san`: 인프라 도메인 (pve, opnsense)
+   - `cp-multi-san`: 서비스 도메인 (authelia, pgadmin, grafana, jenkins, api)
 3. **Actions → Issue/Renew** 클릭
-4. 로그에서 9개 도메인 검증 성공 확인
+4. 로그에서 도메인 검증 성공 확인
 
 발급된 인증서는 HAProxy에서 자동으로 사용된다.
 

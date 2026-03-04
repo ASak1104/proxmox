@@ -12,7 +12,7 @@
 ```
 
 - **빌드 환경**: Docker 컨테이너 (`gradle:jdk25-alpine`)
-- **캐시**: Docker 볼륨 `gradle-cache` → `/root/.gradle` 마운트
+- **캐시**: 호스트 디렉토리 `/var/lib/jenkins/.gradle` → `/root/.gradle` 마운트
 - **배포**: SSH agent (`api-deploy-ssh` credential) → SCP + 원격 스크립트
 
 ## 파이프라인 스테이지
@@ -121,8 +121,8 @@ vault.yml → Ansible → casc.yaml → Jenkins Secret file credential (api-env)
 ## 트러블슈팅
 
 **Pipeline 실행 안 됨 (executor 부족)**
-- `numExecutors: 2`로 설정 확인 (JCasC)
-- 0이면 Docker Pipeline이 작업을 스케줄링할 수 없음
+- Controller `numExecutors: 0`은 정상 (빌드는 agent에서 실행)
+- `docker-agent` 노드가 온라인 상태인지 확인: Jenkins UI → Manage Jenkins → Nodes
 
 **Docker agent 시작 실패**
 ```bash
@@ -134,10 +134,10 @@ ssh root@10.1.0.130 "docker images | grep gradle"
 
 **Gradle 빌드 느림 (캐시 없음)**
 ```bash
-ssh root@10.1.0.130 "docker volume ls | grep gradle-cache"
+ssh root@10.1.0.130 "ls -la /var/lib/jenkins/.gradle/"
 ```
-- `gradle-cache` 볼륨이 존재하는지 확인
-- 볼륨 재생성: `docker volume create gradle-cache`
+- 호스트 Gradle 캐시 디렉토리가 존재하는지 확인
+- Ansible이 자동 생성 (`ansible-playbook site.yml -l cp-jenkins`)
 
 **Deploy SSH 연결 실패**
 ```

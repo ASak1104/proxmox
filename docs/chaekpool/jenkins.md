@@ -16,17 +16,19 @@ cd service/chaekpool/ansible
 ansible-playbook site.yml -l cp-jenkins
 ```
 
-배포 단계 (6단계):
+배포 단계 (7단계):
 1. OpenJDK 21 **전체 버전**, 폰트 패키지 설치, `jenkins` 시스템 사용자 생성
 2. Jenkins WAR v2.541.2 다운로드 → `/opt/jenkins/jenkins.war`
-3. 9개 플러그인 사전 설치 (jenkins-plugin-manager):
+3. 13개 플러그인 사전 설치 (jenkins-plugin-manager):
    - `oic-auth`, `configuration-as-code`
    - `workflow-aggregator`, `docker-workflow`, `git`
    - `credentials-binding`, `ssh-agent`
    - `pipeline-stage-view`, `timestamper`
-4. JCasC 설정(`casc.yaml`) 및 Wrapper 스크립트 배포
-5. OIDC 시크릿 주입 (`sed`로 플레이스홀더 치환)
-6. OpenRC 서비스 배포, 시작 및 부팅 시 자동 시작 등록
+   - `job-dsl`, `junit`, `ws-cleanup`, `ssh-slaves`
+4. JCasC 설정 Jinja2 템플릿 렌더링 (vault 시크릿 자동 주입) 및 Wrapper 스크립트 배포
+5. Gradle 캐시 호스트 디렉토리 생성 (`/var/lib/jenkins/.gradle`)
+6. `jenkins-agent` 시스템 사용자 생성, SSH 키 생성 및 배포
+7. OpenRC 서비스 배포, 시작 및 부팅 시 자동 시작 등록
 
 ### 주요 패키지
 
@@ -48,7 +50,9 @@ export CASC_JENKINS_CONFIG="/var/lib/jenkins/casc.yaml"
 cd "$JENKINS_HOME"
 exec /usr/bin/java -Xmx1024m \
     -Djava.awt.headless=true \
+    -Duser.timezone=Asia/Seoul \
     -Djenkins.install.runSetupWizard=false \
+    -Djenkins.security.csp.CspHeader.headerName=Content-Security-Policy \
     -jar /opt/jenkins/jenkins.war --httpPort=8080
 ```
 
@@ -65,8 +69,10 @@ exec /usr/bin/java -Xmx1024m \
 | `/opt/jenkins/jenkins.war` | Jenkins WAR 파일 |
 | `/opt/jenkins/jenkins-wrapper.sh` | 환경 변수 설정 wrapper |
 | `/var/lib/jenkins/` | JENKINS_HOME (데이터, 플러그인, 작업) |
-| `/var/lib/jenkins/casc.yaml` | JCasC OIDC 설정 |
+| `/var/lib/jenkins/.gradle/` | Docker Pipeline Gradle 캐시 (호스트 마운트) |
+| `/var/lib/jenkins/casc.yaml` | JCasC 설정 (OIDC, Agent, Credentials, Job DSL) |
 | `/var/lib/jenkins/plugins/` | 사전 설치된 플러그인 |
+| `/var/lib/jenkins-agent/` | jenkins-agent 홈 (SSH permanent agent) |
 | `/var/log/jenkins/` | 로그 |
 
 ### OIDC 인증 (Authelia)
@@ -153,24 +159,36 @@ ssh root@10.1.0.130 "tail -f /var/log/jenkins/jenkins.log"
 | 파일 | 설명 |
 |------|------|
 | `service/chaekpool/ansible/roles/jenkins/` | Ansible 역할 |
-| `service/chaekpool/ansible/roles/jenkins/templates/casc.yaml.j2` | JCasC OIDC 설정 |
+| `service/chaekpool/ansible/roles/jenkins/templates/casc.yaml.j2` | JCasC 설정 (OIDC, Agent, Credentials, Job DSL) |
 | `service/chaekpool/ansible/roles/jenkins/templates/jenkins.openrc.j2` | OpenRC 서비스 파일 |
 | `service/chaekpool/ansible/roles/jenkins/templates/jenkins-wrapper.sh.j2` | 환경 변수 설정 wrapper |
 
 ## Pipeline & Docker Agent
 
-Jenkins는 Docker Pipeline 플러그인을 통해 컨테이너 기반 빌드를 지원한다.
+Jenkins는 Controller + SSH Agent 아키텍처로 Docker 컨테이너 기반 빌드를 수행한다.
 
-### 구성 요소
+### 아키텍처
 
+- **Controller** (`numExecutors: 0`): 빌드를 직접 실행하지 않고 오케스트레이션만 담당
+- **`docker-agent`** (SSH permanent agent, `numExecutors: 2`): localhost SSH 접속, 실제 빌드 실행
+  - `jenkins-agent` 시스템 사용자 (`password: "*"` 필수 — `!`는 sshd에서 account locked 거부)
+  - `remoteFS: /var/lib/jenkins-agent`, docker 그룹 소속
+  - `ssh-slaves` 플러그인 필요
 - **Docker**: Jenkins VM에 설치된 Docker (Testcontainers + Docker Pipeline)
-- **`numExecutors: 2`**: Docker Pipeline이 controller executor를 사용하므로 0이면 작업 실행 불가
-- **Gradle 캐시 볼륨**: `docker volume create gradle-cache` — 빌드 간 의존성 캐시 유지
-- **Deploy SSH Key**: JCasC `basicSSHUserPrivateKey` credential (id: `api-deploy-ssh`)
+- **Gradle 캐시**: 호스트 디렉토리 `/var/lib/jenkins/.gradle` → Docker 컨테이너 `/root/.gradle` 마운트
+
+### Credentials (JCasC)
+
+| ID | 유형 | 용도 |
+|----|------|------|
+| `api-deploy-ssh` | SSH Private Key | API 서버(CT 240) 배포용 |
+| `jenkins-agent-ssh` | SSH Private Key | Agent SSH 접속 (자동 생성) |
+| `api-env` | Secret File | API 환경변수 (.env) |
 
 ### 파이프라인 동작
 
-1. Docker 컨테이너(`gradle:jdk25-alpine`)에서 빌드/테스트 수행
-2. Gradle 캐시는 Docker 볼륨(`gradle-cache`)으로 마운트
+1. `docker-agent`에서 Docker 컨테이너(`gradle:jdk25-alpine`) 빌드/테스트 수행
+2. Gradle 캐시는 호스트 디렉토리로 마운트 (빌드 간 의존성 캐시 유지)
 3. Deploy 단계에서 SSH로 API 서버(CT 240)에 JAR 배포
-4. 상세 내용: [jenkins-pipeline.md](jenkins-pipeline.md)
+4. Job DSL로 `chaekpool-api` 파이프라인 자동 생성
+5. 상세 내용: [jenkins-pipeline.md](jenkins-pipeline.md)

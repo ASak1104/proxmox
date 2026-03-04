@@ -112,11 +112,11 @@ email_attribute_path = email
 groups_attribute_path = groups
 name_attribute_path = name
 use_pkce = true
-role_attribute_path = contains(groups[*], 'admins') && 'Admin' || 'Viewer'
+role_attribute_path = contains(groups[*], 'admins') && 'Admin' || 'Editor'
 ```
 
 - `use_pkce = true`: PKCE(Proof Key for Code Exchange) 활성화로 보안 강화
-- `role_attribute_path`: Authelia groups 기반 역할 자동 매핑 — `admins` 그룹이면 Admin, 나머지는 Viewer
+- `role_attribute_path`: Authelia groups 기반 역할 자동 매핑 — `admins` 그룹이면 Admin, 나머지는 Editor (Viewer는 Explore 접근 불가)
 - `oauth_allow_insecure_email_lookup`: 이메일이 일치하는 기존 로컬 사용자와 OIDC 계정을 자동 연결
 - OIDC 클라이언트 시크릿은 `vault.yml`의 `vault_authelia_oidc_grafana_secret` (평문, Authelia 측은 PBKDF2 해시)
 - 소스: `roles/monitoring/templates/grafana.ini.j2`
