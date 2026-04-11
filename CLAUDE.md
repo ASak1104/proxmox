@@ -12,6 +12,7 @@ OpenTofu + Ansible 기반 Proxmox homelab infrastructure automation. Three layer
 
 Documentation is in Korean. See `docs/README.md` for reading order.
 For OPNsense HAProxy operations (troubleshooting, adding domains/certs, API automation), see `docs/opnsense-haproxy-operations-guide.md`.
+For OPNsense firewall-level incidents (pf ruleset load failure, bogons corruption, cp LAN outbound blockage), see `docs/opnsense-firewall-operations-guide.md`.
 
 ## Commands
 

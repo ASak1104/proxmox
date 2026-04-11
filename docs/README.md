@@ -70,6 +70,7 @@ proxmox/
 1. **[사전 요구사항](getting-started.md)** - Proxmox 호스트 준비, 로컬 머신 설정, 변수 설정
 2. **[인프라 배포](infra-deployment.md)** - OPNsense + HAProxy 프로비저닝
 3. **[OPNsense HAProxy 운영 가이드](opnsense-haproxy-operations-guide.md)** - HAProxy 전체 운영 가이드 (마이그레이션 기록, 트러블슈팅, 도메인/인증서 추가 절차)
+   - **[OPNsense 방화벽 운영 가이드](opnsense-firewall-operations-guide.md)** - pf 룰셋, bogons, cp LAN 외부 아웃바운드 장애 진단·복구 매뉴얼
 4. **[Chaekpool 서비스 배포](chaekpool/README.md)** - 서비스 계층 배포 가이드
 5. **[VPN 설정 가이드](vpn-setup.md)** - WireGuard VPN 초기 설정
    - **[VPN 운영 및 트러블슈팅 가이드](vpn-operations-guide.md)** - VPN 문제 해결, 클라이언트 관리, 모니터링, SSH/API 패턴
