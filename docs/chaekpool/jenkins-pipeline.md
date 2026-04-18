@@ -11,14 +11,14 @@
                               (bootJar)     (test + JUnit)   (SSH → CT 240)
 ```
 
-- **빌드 환경**: Docker 컨테이너 (`gradle:jdk25-alpine`)
-- **캐시**: 호스트 디렉토리 `/var/lib/jenkins/.gradle` → `/root/.gradle` 마운트
+- **빌드 환경**: Docker 컨테이너 (`gradle:jdk25-alpine`, `-u 104:106 --group-add 104` 실행 — 호스트 `jenkins-agent` UID 일치)
+- **캐시**: 호스트 디렉토리 `/var/lib/jenkins-agent/.gradle` → `/home/gradle/.gradle` 마운트
 - **배포**: SSH agent (`api-deploy-ssh` credential) → SCP + 원격 스크립트
 
 ## 파이프라인 스테이지
 
 ### 1. Build
-- `.gradle` → `/root/.gradle/chaekpool-api` 심볼릭 링크 (Gradle 캐시 + Configuration Cache 보존)
+- `.gradle` → `/home/gradle/.gradle/chaekpool-api` 심볼릭 링크 (Gradle 캐시 + Configuration Cache 보존)
 - `./gradlew assemble --no-daemon`
 - Fat JAR 생성 (`build/libs/chaekpool-*.jar`)
 
@@ -134,10 +134,17 @@ ssh root@10.1.0.130 "docker images | grep gradle"
 
 **Gradle 빌드 느림 (캐시 없음)**
 ```bash
-ssh root@10.1.0.130 "ls -la /var/lib/jenkins/.gradle/"
+ssh root@10.1.0.130 "ls -la /var/lib/jenkins-agent/.gradle/"
 ```
-- 호스트 Gradle 캐시 디렉토리가 존재하는지 확인
+- 호스트 Gradle 캐시 디렉토리가 존재하고 `jenkins-agent:jenkins-agent` 소유인지 확인
 - Ansible이 자동 생성 (`ansible-playbook site.yml -l cp-jenkins`)
+
+**워크스페이스 정리 실패 (`Operation not permitted`)**
+- 증상: git checkout 단계에서 `Files.setPosixFilePermissions ... EPERM` → "Maximum checkout retry attempts reached"
+- 원인: 컨테이너가 호스트 `jenkins-agent` UID(104)와 다른 UID로 실행 → 워크스페이스 산출물이 타 사용자 소유로 남음
+- 확인: `ssh root@10.1.0.130 "find /var/lib/jenkins-agent/workspace -not -user jenkins-agent | head"`
+- 일회성 복구: `ssh root@10.1.0.130 "chown -R jenkins-agent:jenkins-agent /var/lib/jenkins-agent/workspace"`
+- 항구 대책: `ci/Jenkinsfile`의 docker agent `args`에 `-u 104:106 --group-add 104` 유지
 
 **Deploy SSH 연결 실패**
 ```

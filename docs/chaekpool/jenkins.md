@@ -26,8 +26,8 @@ ansible-playbook site.yml -l cp-jenkins
    - `pipeline-stage-view`, `timestamper`
    - `job-dsl`, `junit`, `ws-cleanup`, `ssh-slaves`
 4. JCasC 설정 Jinja2 템플릿 렌더링 (vault 시크릿 자동 주입) 및 Wrapper 스크립트 배포
-5. Gradle 캐시 호스트 디렉토리 생성 (`/var/lib/jenkins/.gradle`)
-6. `jenkins-agent` 시스템 사용자 생성, SSH 키 생성 및 배포
+5. `jenkins-agent` 시스템 사용자 생성, SSH 키 생성 및 배포
+6. Gradle 캐시 호스트 디렉토리 생성 (`/var/lib/jenkins-agent/.gradle`, `jenkins-agent` 소유)
 7. OpenRC 서비스 배포, 시작 및 부팅 시 자동 시작 등록
 
 ### 주요 패키지
@@ -69,7 +69,7 @@ exec /usr/bin/java -Xmx1024m \
 | `/opt/jenkins/jenkins.war` | Jenkins WAR 파일 |
 | `/opt/jenkins/jenkins-wrapper.sh` | 환경 변수 설정 wrapper |
 | `/var/lib/jenkins/` | JENKINS_HOME (데이터, 플러그인, 작업) |
-| `/var/lib/jenkins/.gradle/` | Docker Pipeline Gradle 캐시 (호스트 마운트) |
+| `/var/lib/jenkins-agent/.gradle/` | Docker Pipeline Gradle 캐시 (호스트 마운트, `jenkins-agent` 소유) |
 | `/var/lib/jenkins/casc.yaml` | JCasC 설정 (OIDC, Agent, Credentials, Job DSL) |
 | `/var/lib/jenkins/plugins/` | 사전 설치된 플러그인 |
 | `/var/lib/jenkins-agent/` | jenkins-agent 홈 (SSH permanent agent) |
@@ -175,7 +175,7 @@ Jenkins는 Controller + SSH Agent 아키텍처로 Docker 컨테이너 기반 빌
   - `remoteFS: /var/lib/jenkins-agent`, docker 그룹 소속
   - `ssh-slaves` 플러그인 필요
 - **Docker**: Jenkins VM에 설치된 Docker (Testcontainers + Docker Pipeline)
-- **Gradle 캐시**: 호스트 디렉토리 `/var/lib/jenkins/.gradle` → Docker 컨테이너 `/root/.gradle` 마운트
+- **Gradle 캐시**: 호스트 디렉토리 `/var/lib/jenkins-agent/.gradle` (UID 104:106) → Docker 컨테이너 `/home/gradle/.gradle` 마운트. 컨테이너는 `-u 104:106 --group-add 104`로 실행되어 호스트 권한과 일치 (root 소유 산출물로 인한 워크스페이스 정리 실패 방지)
 
 ### Credentials (JCasC)
 

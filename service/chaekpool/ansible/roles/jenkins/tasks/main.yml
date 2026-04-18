@@ -117,15 +117,6 @@
     openrc_name: jenkins
     openrc_src: jenkins.openrc
 
-# --- Gradle cache for Docker Pipeline ---
-- name: Create Gradle cache directory
-  ansible.builtin.file:
-    path: "{{ jenkins_home }}/.gradle"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
 # --- Jenkins Agent (SSH localhost) ---
 - name: Create jenkins-agent group
   ansible.builtin.group:
@@ -142,6 +133,15 @@
     home: /var/lib/jenkins-agent
     shell: /bin/ash
     password: "*"
+
+# --- Gradle cache for Docker Pipeline (mounted into Docker agent) ---
+- name: Create Gradle cache directory for jenkins-agent
+  ansible.builtin.file:
+    path: /var/lib/jenkins-agent/.gradle
+    state: directory
+    owner: jenkins-agent
+    group: jenkins-agent
+    mode: "0755"
 
 - name: Generate SSH keypair for jenkins agent
   ansible.builtin.user:
