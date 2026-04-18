@@ -2,3 +2,13 @@
 jenkins_home: /var/lib/jenkins
 jenkins_opt: /opt/jenkins
 jenkins_log_dir: /var/log/jenkins
+
+# UID/GID는 명시적으로 고정 — chaekpool-api ci/Jenkinsfile의 docker agent
+# args(`-u 1000:1000 --group-add 104`)가 이 값에 의존. VM 재생성·유저 재생성
+# 시 자동 할당으로 값이 흔들리면 Jenkins 빌드가 워크스페이스 권한 에러로 실패함.
+# UID 1000은 Jenkins 공식 이미지(jenkins/agent, gradle:*) 컨벤션과 일치.
+docker_gid: 104
+jenkins_uid: 103
+jenkins_gid: 105
+jenkins_agent_uid: 1000
+jenkins_agent_gid: 1000

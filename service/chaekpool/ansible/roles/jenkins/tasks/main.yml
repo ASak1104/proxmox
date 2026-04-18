@@ -1,5 +1,13 @@
 ---
 # --- Docker for Testcontainers ---
+# docker GID는 apk install 전에 명시적으로 생성 — 설치 후 GID 변경은
+# 모든 docker 소유 파일/소켓 권한이 어긋나 위험.
+- name: Pin docker group GID before apk install
+  ansible.builtin.group:
+    name: docker
+    gid: "{{ docker_gid }}"
+    system: true
+
 - name: Install Docker
   ansible.builtin.apk:
     name:
@@ -30,6 +38,8 @@
     tasks_from: service_user
   vars:
     svc_name: jenkins
+    svc_uid: "{{ jenkins_uid }}"
+    svc_gid: "{{ jenkins_gid }}"
     svc_home: "{{ jenkins_home }}"
     svc_dirs:
       - "{{ jenkins_home }}"
@@ -118,14 +128,30 @@
     openrc_src: jenkins.openrc
 
 # --- Jenkins Agent (SSH localhost) ---
+# Alpine nocloud 이미지의 cloud-init 기본 유저(alpine, UID 1000)는 사용하지
+# 않으며 jenkins-agent UID 1000과 충돌하므로 제거. 호스트 SSH는 root 키 기반.
+- name: Remove unused alpine cloud-init user
+  ansible.builtin.user:
+    name: alpine
+    state: absent
+    remove: true
+    force: true
+
+- name: Remove alpine group
+  ansible.builtin.group:
+    name: alpine
+    state: absent
+
 - name: Create jenkins-agent group
   ansible.builtin.group:
     name: jenkins-agent
+    gid: "{{ jenkins_agent_gid }}"
     system: true
 
 - name: Create jenkins-agent user
   ansible.builtin.user:
     name: jenkins-agent
+    uid: "{{ jenkins_agent_uid }}"
     group: jenkins-agent
     groups: docker
     system: true
@@ -133,6 +159,31 @@
     home: /var/lib/jenkins-agent
     shell: /bin/ash
     password: "*"
+
+# chaekpool-api ci/Jenkinsfile docker agent args(`-u 1000:1000 --group-add 104`)와
+# 정합성 검증. 값이 달라지면 다음 빌드가 워크스페이스 chmod EPERM으로 실패함.
+- name: Lookup jenkins-agent UID
+  ansible.builtin.getent:
+    database: passwd
+    key: jenkins-agent
+
+- name: Lookup docker GID
+  ansible.builtin.getent:
+    database: group
+    key: docker
+
+- name: Assert UID/GID match Jenkinsfile assumptions
+  ansible.builtin.assert:
+    that:
+      - getent_passwd['jenkins-agent'][1] | int == jenkins_agent_uid
+      - getent_passwd['jenkins-agent'][2] | int == jenkins_agent_gid
+      - getent_group['docker'][1] | int == docker_gid
+    fail_msg: >-
+      UID/GID 불일치 — chaekpool-api Jenkinsfile/Dockerfile의 docker agent
+      args(`-u`, `--group-add`)와 ARG 값 동기화 필요.
+      jenkins-agent UID={{ getent_passwd['jenkins-agent'][1] }} (기대: {{ jenkins_agent_uid }}),
+      jenkins-agent GID={{ getent_passwd['jenkins-agent'][2] }} (기대: {{ jenkins_agent_gid }}),
+      docker GID={{ getent_group['docker'][1] }} (기대: {{ docker_gid }})
 
 # --- Gradle cache for Docker Pipeline (mounted into Docker agent) ---
 - name: Create Gradle cache directory for jenkins-agent

@@ -7,6 +7,8 @@
 #   vars:
 #     svc_name: traefik
 #     svc_home: /var/empty        (선택, 기본값 /var/empty)
+#     svc_uid: 103                (선택, 미지정 시 시스템 자동 할당)
+#     svc_gid: 105                (선택, 미지정 시 시스템 자동 할당)
 #     svc_dirs:
 #       - /etc/traefik
 #       - /var/log/traefik
@@ -14,11 +16,13 @@
 - name: "Create {{ svc_name }} group"
   ansible.builtin.group:
     name: "{{ svc_name }}"
+    gid: "{{ svc_gid | default(omit) }}"
     system: true
 
 - name: "Create {{ svc_name }} user"
   ansible.builtin.user:
     name: "{{ svc_name }}"
+    uid: "{{ svc_uid | default(omit) }}"
     group: "{{ svc_name }}"
     system: true
     create_home: false

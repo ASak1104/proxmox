@@ -69,7 +69,7 @@ exec /usr/bin/java -Xmx1024m \
 | `/opt/jenkins/jenkins.war` | Jenkins WAR 파일 |
 | `/opt/jenkins/jenkins-wrapper.sh` | 환경 변수 설정 wrapper |
 | `/var/lib/jenkins/` | JENKINS_HOME (데이터, 플러그인, 작업) |
-| `/var/lib/jenkins-agent/.gradle/` | Docker Pipeline Gradle 캐시 (호스트 마운트, `jenkins-agent` 소유) |
+| `/var/lib/jenkins-agent/.gradle/` | Docker Pipeline Gradle 캐시 (호스트 마운트, `jenkins-agent` UID 1000 소유) |
 | `/var/lib/jenkins/casc.yaml` | JCasC 설정 (OIDC, Agent, Credentials, Job DSL) |
 | `/var/lib/jenkins/plugins/` | 사전 설치된 플러그인 |
 | `/var/lib/jenkins-agent/` | jenkins-agent 홈 (SSH permanent agent) |
@@ -175,7 +175,7 @@ Jenkins는 Controller + SSH Agent 아키텍처로 Docker 컨테이너 기반 빌
   - `remoteFS: /var/lib/jenkins-agent`, docker 그룹 소속
   - `ssh-slaves` 플러그인 필요
 - **Docker**: Jenkins VM에 설치된 Docker (Testcontainers + Docker Pipeline)
-- **Gradle 캐시**: 호스트 디렉토리 `/var/lib/jenkins-agent/.gradle` (UID 104:106) → Docker 컨테이너 `/home/gradle/.gradle` 마운트. 컨테이너는 `-u 104:106 --group-add 104 -e HOME=/home/gradle`로 실행되어 호스트 권한과 일치하고 wrapper도 마운트된 캐시를 사용 (root 소유 산출물로 인한 워크스페이스 정리 실패 방지)
+- **Gradle 캐시**: 호스트 디렉토리 `/var/lib/jenkins-agent/.gradle` (UID 1000:1000, jenkins-agent 소유) → Docker 컨테이너 `/home/gradle/.gradle` 마운트. 컨테이너는 `-u 1000:1000 --group-add 104`로 실행되어 베이스 이미지(`gradle:jdk25-alpine`)의 `gradle` 유저(UID 1000)와 호스트 `jenkins-agent` 양쪽 모두와 정합. UID 1000은 Jenkins 공식 이미지(`jenkins/agent` 등) 컨벤션과 일치
 
 ### Credentials (JCasC)
 
