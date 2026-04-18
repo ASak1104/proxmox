@@ -175,7 +175,7 @@ Jenkins는 Controller + SSH Agent 아키텍처로 Docker 컨테이너 기반 빌
   - `remoteFS: /var/lib/jenkins-agent`, docker 그룹 소속
   - `ssh-slaves` 플러그인 필요
 - **Docker**: Jenkins VM에 설치된 Docker (Testcontainers + Docker Pipeline)
-- **Gradle 캐시**: 호스트 디렉토리 `/var/lib/jenkins-agent/.gradle` (UID 104:106) → Docker 컨테이너 `/home/gradle/.gradle` 마운트. 컨테이너는 `-u 104:106 --group-add 104`로 실행되어 호스트 권한과 일치 (root 소유 산출물로 인한 워크스페이스 정리 실패 방지)
+- **Gradle 캐시**: 호스트 디렉토리 `/var/lib/jenkins-agent/.gradle` (UID 104:106) → Docker 컨테이너 `/home/gradle/.gradle` 마운트. 컨테이너는 `-u 104:106 --group-add 104 -e HOME=/home/gradle`로 실행되어 호스트 권한과 일치하고 wrapper도 마운트된 캐시를 사용 (root 소유 산출물로 인한 워크스페이스 정리 실패 방지)
 
 ### Credentials (JCasC)
 

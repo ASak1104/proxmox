@@ -11,7 +11,7 @@
                               (bootJar)     (test + JUnit)   (SSH → CT 240)
 ```
 
-- **빌드 환경**: Docker 컨테이너 (`gradle:jdk25-alpine`, `-u 104:106 --group-add 104` 실행 — 호스트 `jenkins-agent` UID 일치)
+- **빌드 환경**: Docker 컨테이너 (`gradle:jdk25-alpine`, `-u 104:106 --group-add 104 -e HOME=/home/gradle` 실행 — 호스트 `jenkins-agent` UID 일치)
 - **캐시**: 호스트 디렉토리 `/var/lib/jenkins-agent/.gradle` → `/home/gradle/.gradle` 마운트
 - **배포**: SSH agent (`api-deploy-ssh` credential) → SCP + 원격 스크립트
 
@@ -144,7 +144,11 @@ ssh root@10.1.0.130 "ls -la /var/lib/jenkins-agent/.gradle/"
 - 원인: 컨테이너가 호스트 `jenkins-agent` UID(104)와 다른 UID로 실행 → 워크스페이스 산출물이 타 사용자 소유로 남음
 - 확인: `ssh root@10.1.0.130 "find /var/lib/jenkins-agent/workspace -not -user jenkins-agent | head"`
 - 일회성 복구: `ssh root@10.1.0.130 "chown -R jenkins-agent:jenkins-agent /var/lib/jenkins-agent/workspace"`
-- 항구 대책: `ci/Jenkinsfile`의 docker agent `args`에 `-u 104:106 --group-add 104` 유지
+- 항구 대책: `ci/Jenkinsfile`의 docker agent `args`에 `-u 104:106 --group-add 104 -e HOME=/home/gradle` 유지
+
+**Gradle wrapper `Could not create parent directory for lock file /.gradle/...`**
+- 원인: 컨테이너 `/etc/passwd`에 UID 104 entry가 없어 `$HOME`이 `/`로 fallback → wrapper가 `/.gradle/wrapper/...`에 락 파일 생성 실패
+- 해결: docker `args`에 `-e HOME=/home/gradle` 명시 (이미 적용됨)
 
 **Deploy SSH 연결 실패**
 ```
